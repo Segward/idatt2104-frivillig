@@ -40,3 +40,7 @@ The executable is written to `build/idatt2104`.
 ```sh
 ctest --preset default
 ```
+
+## Third party dependencies
+- GoogleTest; Google C++ testing and mocking framework.
+- Sockpp; Modern C++ socket library.
