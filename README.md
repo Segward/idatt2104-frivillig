@@ -1,19 +1,25 @@
 # idatt2104-frivillig
 
-## Prerequisites
-
+## Requirements
 - CMake 3.25+
 - A C++23 compiler
 - Git (with submodules)
 
-This project uses [vcpkg](https://github.com/microsoft/vcpkg) as a git submodule for dependencies. After cloning, initialize it:
+## Install
+To install this project you need to clone this repository:
+
+```sh
+git clone https://github.com/Segward/idatt2104-frivillig.git
+```
+
+This project uses [vcpkg](https://github.com/microsoft/vcpkg) as a git submodule.
+After cloning the project you need to initialize it:
 
 ```sh
 git submodule update --init --recursive
 ```
 
 ## Build
-
 Configure and build using the provided CMake preset:
 
 ```sh
@@ -21,7 +27,7 @@ cmake --preset default
 cmake --build --preset default
 ```
 
-The resulting executable is written to `build/idatt2104`.
+The executable is written to `build/idatt2104`.
 
 ## Run
 
@@ -29,7 +35,7 @@ The resulting executable is written to `build/idatt2104`.
 ./build/idatt2104
 ```
 
-## Run unit tests
+## Unit tests
 
 ```sh
 ctest --preset default
