@@ -1,5 +1,5 @@
 {
   "name": "idatt2104",
   "version-string": "0.1.0",
-  "dependencies": ["gtest"]
+  "dependencies": ["gtest", "sockpp"]
 }
