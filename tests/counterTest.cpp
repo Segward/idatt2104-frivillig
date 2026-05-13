@@ -3,13 +3,13 @@
 #include <gtest/gtest.h>
 
 TEST(CounterTest, StartsAtZero) {
-    Counter counter("A");
+    counter counter("A");
 
     EXPECT_EQ(counter.value(), 0);
 }
 
 TEST(CounterTest, IncrementIncreasesValue) {
-    Counter counter("A");
+    counter counter("A");
 
     counter.increment();
 
@@ -17,7 +17,7 @@ TEST(CounterTest, IncrementIncreasesValue) {
 }
 
 TEST(CounterTest, IncrementByAmountIncreasesValue) {
-    Counter counter("A");
+    counter counter("A");
 
     counter.increment(5);
 
@@ -25,7 +25,7 @@ TEST(CounterTest, IncrementByAmountIncreasesValue) {
 }
 
 TEST(CounterTest, DecrementDecreasesValue) {
-    Counter counter("A");
+    counter counter("A");
 
     counter.increment(5);
     counter.decrement();
@@ -34,7 +34,7 @@ TEST(CounterTest, DecrementDecreasesValue) {
 }
 
 TEST(CounterTest, DecrementByAmountDecreasesValue) {
-    Counter counter("A");
+    counter counter("A");
 
     counter.increment(5);
     counter.decrement(4);
@@ -43,8 +43,8 @@ TEST(CounterTest, DecrementByAmountDecreasesValue) {
 }
 
 TEST(CounterTest, MergeCombinesValue) {
-    Counter counter_A("A");
-    Counter counter_B("B");
+    counter counter_A("A");
+    counter counter_B("B");
 
     counter_A.increment(5);
     counter_B.decrement();
@@ -55,8 +55,8 @@ TEST(CounterTest, MergeCombinesValue) {
 }
 
 TEST(CounterTest, CommutativeMerge) {
-    Counter counter_A("A");
-    Counter counter_B("B");
+    counter counter_A("A");
+    counter counter_B("B");
 
     counter_A.increment(10);
     counter_A.decrement(2);
@@ -72,7 +72,7 @@ TEST(CounterTest, CommutativeMerge) {
 }
 
 TEST(CounterTest, IdempotentMerge) {
-    Counter counter_A("A");
+    counter counter_A("A");
 
     counter_A.increment(5);
 

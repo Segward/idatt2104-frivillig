@@ -3,8 +3,8 @@
 #include <algorithm>
 #include <utility>
 
-//Counter featuring both increment and decrement functionality
-Counter::Counter(std::string client_id)
+//counter featuring both increment and decrement functionality
+counter::counter(std::string client_id)
     : client_id(std::move(client_id)) 
 {
     state.increments[this->client_id] = 0;
@@ -12,21 +12,21 @@ Counter::Counter(std::string client_id)
 }
 
 //Increment counter by arbitrary amount
-void Counter::increment(std::uint64_t amount) 
+void counter::increment(std::uint64_t amount) 
 {
     if (amount < 0) throw std::exception("Increment amount cannot be negative");
     state.increments[client_id] += amount;
 }
 
 //Decrement the counter by arbitrary amount
-void Counter::decrement(std::uint64_t amount) 
+void counter::decrement(std::uint64_t amount) 
 {
     if (amount < 0) throw std::exception("Decrement amount cannot be negative");
     state.decrements[client_id] += amount;
 }
 
 // Merges counter with an incoming counter, combining results
-void Counter::merge(const Counter& incoming_counter) 
+void counter::merge(const counter& incoming_counter) 
 {
     for (const auto& [id, incoming_value] : incoming_counter.state.increments) {
         std::uint64_t current_value = 0;
@@ -52,7 +52,7 @@ void Counter::merge(const Counter& incoming_counter)
 }
 
 //Calculates current value based on increment and decrement history
-std::int64_t Counter::value() const 
+std::int64_t counter::value() const 
 {
     std::int64_t total_increments = 0;
     std::int64_t total_decrements = 0;
@@ -68,7 +68,7 @@ std::int64_t Counter::value() const
     return total_increments - total_decrements;
 }
 
-const counter_state& Counter::get_state() const 
+const counter_state& counter::get_state() const 
 {
     return state;
 }
