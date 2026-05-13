@@ -1,8 +1,9 @@
-#include "counter.hpp"
+#include <counter.hpp>
 
 #include <algorithm>
 #include <utility>
 
+//Counter featuring both increment and decrement functionality
 Counter::Counter(std::string client_id)
     : client_id(std::move(client_id)) 
 {
@@ -10,16 +11,19 @@ Counter::Counter(std::string client_id)
     state.decrements[this->client_id] = 0;
 }
 
+//Increment counter by arbitrary amount
 void Counter::increment(std::uint64_t amount) 
 {
     state.increments[client_id] += amount;
 }
 
+//Decrement the counter by arbitrary amount
 void Counter::decrement(std::uint64_t amount) 
 {
     state.decrements[client_id] += amount;
 }
 
+// Merges counter with an incoming counter, combining results
 void Counter::merge(const Counter& incoming_counter) 
 {
     for (const auto& [id, incoming_value] : incoming_counter.state.increments) {
@@ -45,6 +49,7 @@ void Counter::merge(const Counter& incoming_counter)
     }
 }
 
+//Calculates current value based on increment and decrement history
 std::int64_t Counter::value() const 
 {
     std::int64_t total_increments = 0;
