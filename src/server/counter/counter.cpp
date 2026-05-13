@@ -14,12 +14,14 @@ Counter::Counter(std::string client_id)
 //Increment counter by arbitrary amount
 void Counter::increment(std::uint64_t amount) 
 {
+    if (amount < 0) throw std::exception("Increment amount cannot be negative");
     state.increments[client_id] += amount;
 }
 
 //Decrement the counter by arbitrary amount
 void Counter::decrement(std::uint64_t amount) 
 {
+    if (amount < 0) throw std::exception("Decrement amount cannot be negative");
     state.decrements[client_id] += amount;
 }
 
@@ -29,9 +31,9 @@ void Counter::merge(const Counter& incoming_counter)
     for (const auto& [id, incoming_value] : incoming_counter.state.increments) {
         std::uint64_t current_value = 0;
 
-        auto it = state.increments.find(id);
-        if (it != state.increments.end()) {
-            current_value = it->second;
+        auto incoming_increments = state.increments.find(id);
+        if (incoming_increments != state.increments.end()) {
+            current_value = incoming_increments->second;
         }
 
         state.increments[id] = std::max(current_value, incoming_value);
@@ -40,9 +42,9 @@ void Counter::merge(const Counter& incoming_counter)
     for (const auto& [id, incoming_value] : incoming_counter.state.decrements) {
         std::uint64_t current_value = 0;
 
-        auto it = state.decrements.find(id);
-        if (it != state.decrements.end()) {
-            current_value = it->second;
+        auto incoming_decrements = state.decrements.find(id);
+        if (incoming_decrements != state.decrements.end()) {
+            current_value = incoming_decrements->second;
         }
 
         state.decrements[id] = std::max(current_value, incoming_value);
