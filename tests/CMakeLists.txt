@@ -8,6 +8,10 @@ target_include_directories(tests PRIVATE
   ${CMAKE_SOURCE_DIR}/include
 )
 
-target_link_libraries(tests PRIVATE GTest::gtest_main)
+target_link_libraries(tests 
+  PRIVATE 
+    crdt_core 
+    GTest::gtest_main
+)
 
 gtest_discover_tests(tests)
