@@ -6,6 +6,8 @@ file(GLOB_RECURSE TEST_SOURCES "*.cpp")
 add_executable(tests
     ${TEST_SOURCES}
     ${CMAKE_SOURCE_DIR}/src/counter.cpp
+    ${CMAKE_SOURCE_DIR}/src/client.cpp
+    ${CMAKE_SOURCE_DIR}/src/server.cpp
 )
 
 target_include_directories(tests
@@ -16,6 +18,7 @@ target_include_directories(tests
 target_link_libraries(tests
     PRIVATE
         GTest::gtest_main
+        Sockpp::sockpp-static
 )
 
 gtest_discover_tests(tests)
