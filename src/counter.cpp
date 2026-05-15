@@ -1,6 +1,7 @@
 #include <counter.hpp>
 
 #include <algorithm>
+#include <stdexcept>
 #include <utility>
 
 //counter featuring both increment and decrement functionality
@@ -14,14 +15,14 @@ counter::counter(std::string client_id)
 //Increment counter by arbitrary amount
 void counter::increment(std::uint64_t amount) 
 {
-    if (amount < 0) throw std::exception("Increment amount cannot be negative");
+    if (amount < 0) throw std::invalid_argument("Increment amount cannot be negative");
     state.increments[client_id] += amount;
 }
 
 //Decrement the counter by arbitrary amount
 void counter::decrement(std::uint64_t amount) 
 {
-    if (amount < 0) throw std::exception("Decrement amount cannot be negative");
+    if (amount < 0) throw std::invalid_argument("Decrement amount cannot be negative");
     state.decrements[client_id] += amount;
 }
 
