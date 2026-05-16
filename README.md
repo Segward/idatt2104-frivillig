@@ -27,12 +27,19 @@ cmake --preset default
 cmake --build --preset default
 ```
 
-The executable is written to `build/idatt2104`.
+The executables are written to `build/client` and `build/server`.
 
 ## Run
+Start the server in one terminal:
 
 ```sh
-./build/idatt2104
+./build/server
+```
+
+Then start the client in another terminal:
+
+```sh
+./build/client
 ```
 
 ## Unit tests

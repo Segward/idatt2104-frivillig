@@ -7,15 +7,25 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 find_package(sockpp CONFIG REQUIRED)
 
-file(GLOB_RECURSE SOURCES "src/*.cpp")
-add_executable(${PROJECT_NAME} ${SOURCES})
-
-target_include_directories(
-  ${PROJECT_NAME} PRIVATE
-  ${CMAKE_CURRENT_SOURCE_DIR}/include
+add_library(crdt STATIC
+  src/shared/crdt/counter.cpp
+  src/shared/crdt/wire.cpp
 )
+target_include_directories(crdt PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-target_link_libraries(${PROJECT_NAME} PRIVATE Sockpp::sockpp-static)
+add_executable(client
+  src/client/main.cpp
+  src/client/client.cpp
+)
+target_include_directories(client PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_link_libraries(client PRIVATE crdt Sockpp::sockpp-static)
+
+add_executable(server
+  src/server/main.cpp
+  src/server/server.cpp
+)
+target_include_directories(server PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_link_libraries(server PRIVATE crdt Sockpp::sockpp-static)
 
 enable_testing()
 add_subdirectory(tests)

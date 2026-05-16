@@ -1,29 +1,36 @@
 #ifndef SERVER_HPP
 #define SERVER_HPP
 
-#include <condition_variable>
+#include <atomic>
+#include <counter.hpp>
+#include <memory>
 #include <mutex>
 #include <string>
 #include <thread>
+#include <vector>
 #include <sockpp/tcp_acceptor.h>
 #include <sockpp/tcp_socket.h>
 
-class server
-{
-  public:
-    server(const std::string& hostname, unsigned port);
-    ~server();
-    void start();
-    void join();
-    bool send(const std::string& data);
-  private:
-    void wait_for_accept();
-    sockpp::tcp_acceptor acc;
-    sockpp::tcp_socket conn;
-    std::mutex m;
-    std::condition_variable cv;
-    bool accepted = false;
-    std::thread worker;
+class network_server {
+public:
+  network_server(const std::string& hostname, unsigned port);
+  ~network_server();
+  void start();
+  void stop();
+  void join();
+
+private:
+  void accept_loop();
+  void handle_connection(std::shared_ptr<sockpp::tcp_socket> sock);
+  void broadcast_locked();
+
+  sockpp::tcp_acceptor acc;
+  counter master;
+  std::mutex mu;
+  std::vector<std::shared_ptr<sockpp::tcp_socket>> conns;
+  std::thread acceptor_thread;
+  std::vector<std::thread> client_threads;
+  std::atomic<bool> running{false};
 };
 
 #endif
