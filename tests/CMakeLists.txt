@@ -8,6 +8,7 @@ add_executable(tests
     ${CMAKE_SOURCE_DIR}/src/counter.cpp
     ${CMAKE_SOURCE_DIR}/src/client.cpp
     ${CMAKE_SOURCE_DIR}/src/server.cpp
+    ${CMAKE_SOURCE_DIR}/src/text_RGA.cpp
 )
 
 target_include_directories(tests
