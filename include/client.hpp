@@ -1,38 +1,41 @@
 #ifndef CLIENT_HPP
 #define CLIENT_HPP
 
-#include <atomic>
 #include <counter.hpp>
-#include <cstdint>
-#include <mutex>
-#include <string>
-#include <thread>
+#include <packet.hpp>
 #include <sockpp/tcp_connector.h>
 
-class network_client {
-public:
-  network_client(std::string id, const std::string& hostname, unsigned port);
-  ~network_client();
+class Client {
+  public:
+    Client(const std::string& host, unsigned port);
+    ~Client();
 
-  void start();
-  void stop();
-  void join();
+    Client(const Client&) = delete;
+    Client& operator=(const Client&) = delete;
+    Client(Client&&) = delete;
+    Client& operator=(Client&&) = delete;
 
-  void increment(std::uint64_t amount = 1);
-  void decrement(std::uint64_t amount = 1);
-  std::int64_t value();
-  const std::string& id() const { return client_id; }
+    void start();
+    void stop();
+    void join();
 
-private:
-  void receive_loop();
-  void send_state_locked();
+    void increment(std::uint64_t amount = 1);
+    void decrement(std::uint64_t amount = 1);
+    std::int64_t value();
 
-  std::string client_id;
-  counter local;
-  std::mutex mu;
-  sockpp::tcp_connector conn;
-  std::thread worker;
-  std::atomic<bool> running{false};
+    const std::string& id() const { return _client_id; }
+
+  private:
+    void receive_loop();
+    void send_state_locked();
+
+    std::string _client_id;
+    std::optional<Counter> _local;
+    std::optional<Packet> _pkt;
+    std::mutex _mu;
+    sockpp::tcp_connector _conn;
+    std::thread _worker;
+    std::atomic<bool> _running{false};
 };
 
 #endif
