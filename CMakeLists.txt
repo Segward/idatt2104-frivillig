@@ -9,6 +9,7 @@ find_package(sockpp CONFIG REQUIRED)
 
 add_library(crdt STATIC
   src/shared/crdt/counter.cpp
+  src/shared/crdt/text_RGA.cpp
   src/shared/crdt/wire.cpp
 )
 target_include_directories(crdt PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
