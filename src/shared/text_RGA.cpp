@@ -12,10 +12,11 @@ text_RGA::text_RGA(std::string client_id)
         throw std::invalid_argument("Client ID cannot be empty");
     }
 
-    // Empty string represents ROOT / beginning of the text.
+    // Empty string represents beginning of the text.
     children[""] = {};
 }
 
+//Generate new ID, unique identifier
 std::string text_RGA::next_id() {
     local_sequence++;
 
@@ -30,10 +31,12 @@ std::string text_RGA::next_id() {
     return stream.str();
 }
 
+//Checks if node exists
 bool text_RGA::node_exists(const std::string& node_id) const {
     return nodes.find(node_id) != nodes.end();
 }
 
+//Checks if pending changes have a given operation
 bool text_RGA::pending_contains(const std::string& operation_id) const {
     return std::any_of(
         pending_changes.begin(),
@@ -44,10 +47,12 @@ bool text_RGA::pending_contains(const std::string& operation_id) const {
     );
 }
 
+//Insert text at beginning if string; empty string
 text_change text_RGA::insert_at_beginning(char value) {
     return insert_after("", value);
 }
 
+//Insert text after a given character ID
 text_change text_RGA::insert_after(
     const std::string& previous_id,
     char value
@@ -70,6 +75,7 @@ text_change text_RGA::insert_after(
     return change;
 }
 
+//Erase element
 text_change text_RGA::erase(const std::string& element_id) {
     if (!node_exists(element_id)) {
         throw std::invalid_argument("Cannot erase unknown element");
@@ -89,6 +95,7 @@ text_change text_RGA::erase(const std::string& element_id) {
     return change;
 }
 
+//Apply a given text change
 void text_RGA::apply(const text_change& change) {
     if (change.operation_id.empty()) {
         throw std::invalid_argument("Operation ID cannot be empty");
@@ -109,6 +116,7 @@ void text_RGA::apply(const text_change& change) {
     }
 }
 
+//Apply change if state allows it
 bool text_RGA::try_apply_change(const text_change& change) {
     if (change.type == text_operation_type::Insert) {
         if (change.element_id.empty()) {
@@ -166,6 +174,7 @@ bool text_RGA::try_apply_change(const text_change& change) {
     throw std::invalid_argument("Unknown text operation type");
 }
 
+//Retry applying pending changes
 void text_RGA::retry_pending_changes() {
     bool made_progress = true;
 
@@ -195,6 +204,7 @@ void text_RGA::retry_pending_changes() {
     }
 }
 
+//Create text from given element
 void text_RGA::render_from(
     const std::string& previous_id,
     std::string& output
@@ -216,6 +226,7 @@ void text_RGA::render_from(
     }
 }
 
+//Return text
 std::string text_RGA::value() const {
     std::string output;
 
@@ -224,6 +235,7 @@ std::string text_RGA::value() const {
     return output;
 }
 
+//Check if operation applied, to avoid repetition
 bool text_RGA::has_applied(const std::string& operation_id) const {
     return (applied_operations.find(operation_id) != applied_operations.end());
 }
