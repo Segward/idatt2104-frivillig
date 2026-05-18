@@ -1,9 +1,5 @@
 #include <server.hpp>
-#include <wire.hpp>
-
-#include <algorithm>
-#include <cstdio>
-#include <utility>
+#include <packet.hpp>
 
 network_server::network_server(const std::string& hostname, unsigned port)
   : master("server")
@@ -47,8 +43,8 @@ void network_server::accept_loop()
     {
       std::lock_guard<std::mutex> lock(this->mu);
       this->conns.push_back(shared);
-      std::string frame = serialize_state(this->master.get_state());
-      shared->write(frame);
+      auto frame = serialize_counter(this->master.get_state());
+      shared->write(frame.data(), frame.size());
       this->client_threads.emplace_back([this, shared] { this->handle_connection(shared); });
       printf("[server] client connected (total=%zu)\n", this->conns.size());
     }
@@ -57,14 +53,20 @@ void network_server::accept_loop()
 
 void network_server::handle_connection(std::shared_ptr<sockpp::tcp_socket> sock)
 {
-  line_reader<sockpp::tcp_socket> reader(*sock);
-  std::string line;
-  while (reader.read_line(line)) {
-    counter_state incoming = parse_state(line);
-    std::lock_guard<std::mutex> lock(this->mu);
-    this->master.merge(incoming);
-    printf("[server] merged update; value=%lld\n", static_cast<long long>(this->master.value()));
-    this->broadcast_locked();
+  packet_reader<sockpp::tcp_socket> reader(*sock);
+  std::vector<std::uint8_t> pkt;
+  while (reader.read_packet(pkt)) {
+    switch (static_cast<packet_type>(pkt[0])) {
+      case packet_type::COUNTER: {
+        counter_state incoming = parse_counter(pkt.data(), pkt.size());
+        std::lock_guard<std::mutex> lock(this->mu);
+        this->master.merge(incoming);
+        printf("[server] merged update; value=%lld\n",
+               static_cast<long long>(this->master.value()));
+        this->broadcast_locked();
+        break;
+      }
+    }
   }
   std::lock_guard<std::mutex> lock(this->mu);
   this->conns.erase(std::remove(this->conns.begin(), this->conns.end(), sock), this->conns.end());
@@ -73,8 +75,8 @@ void network_server::handle_connection(std::shared_ptr<sockpp::tcp_socket> sock)
 
 void network_server::broadcast_locked()
 {
-  std::string frame = serialize_state(this->master.get_state());
+  auto frame = serialize_counter(this->master.get_state());
   for (auto& c : this->conns) {
-    c->write(frame);
+    c->write(frame.data(), frame.size());
   }
 }

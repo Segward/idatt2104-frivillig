@@ -1,10 +1,6 @@
 #ifndef COUNTER_HPP
 #define COUNTER_HPP
 
-#include <cstdint>
-#include <string>
-#include <unordered_map>
-
 struct counter_state {
   std::unordered_map<std::string, std::uint64_t> increments;
   std::unordered_map<std::string, std::uint64_t> decrements;

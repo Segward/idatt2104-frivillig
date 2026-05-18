@@ -1,12 +1,7 @@
 #ifndef CLIENT_HPP
 #define CLIENT_HPP
 
-#include <atomic>
 #include <counter.hpp>
-#include <cstdint>
-#include <mutex>
-#include <string>
-#include <thread>
 #include <sockpp/tcp_connector.h>
 
 class network_client {

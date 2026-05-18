@@ -1,13 +1,7 @@
 #ifndef SERVER_HPP
 #define SERVER_HPP
 
-#include <atomic>
 #include <counter.hpp>
-#include <memory>
-#include <mutex>
-#include <string>
-#include <thread>
-#include <vector>
 #include <sockpp/tcp_acceptor.h>
 #include <sockpp/tcp_socket.h>
 

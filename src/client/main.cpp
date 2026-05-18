@@ -1,12 +1,5 @@
 #include <client.hpp>
-#include <wire.hpp>
-
-#include <cstdint>
-#include <cstdio>
-#include <cstdlib>
-#include <iostream>
-#include <sstream>
-#include <string>
+#include <packet.hpp>
 
 int main(int argc, char** argv)
 {

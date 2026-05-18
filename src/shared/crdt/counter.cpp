@@ -1,8 +1,5 @@
 #include <counter.hpp>
 
-#include <algorithm>
-#include <utility>
-
 counter::counter(std::string client_id)
   : client_id(std::move(client_id))
 {

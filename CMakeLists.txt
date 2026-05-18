@@ -9,9 +9,12 @@ find_package(sockpp CONFIG REQUIRED)
 
 add_library(crdt STATIC
   src/shared/crdt/counter.cpp
-  src/shared/crdt/wire.cpp
+  src/shared/crdt/packet.cpp
 )
 target_include_directories(crdt PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_precompile_headers(crdt PUBLIC
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/common.hpp
+)
 
 add_executable(client
   src/client/main.cpp

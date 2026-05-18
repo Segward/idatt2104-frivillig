@@ -1,9 +1,5 @@
 #include <server.hpp>
-#include <wire.hpp>
-
-#include <cstdio>
-#include <cstdlib>
-#include <string>
+#include <packet.hpp>
 
 int main(int argc, char** argv)
 {
