@@ -1,28 +1,33 @@
-#pragma once
+#ifndef COUNTER_HPP
+#define COUNTER_HPP
 
-#include <cstdint>
-#include <string>
-#include <unordered_map>
-
-struct counter_state {
-    std::unordered_map<std::string, std::uint64_t> increments;
-    std::unordered_map<std::string, std::uint64_t> decrements;
+struct CounterState {
+  std::unordered_map<std::string, std::uint64_t> increments;
+  std::unordered_map<std::string, std::uint64_t> decrements;
 };
 
-class counter {
-private:
-    std::string client_id;
-    counter_state state;
+class Counter {
+  public:
+    explicit Counter(std::string client_id);
+    ~Counter() = default;
 
-public:
-    explicit counter(std::string client_id);
+    Counter(const Counter&) = delete;
+    Counter& operator=(const Counter&) = delete;
+    Counter(Counter&&) = delete;
+    Counter& operator=(Counter&&) = delete;
 
     void increment(std::uint64_t amount = 1);
     void decrement(std::uint64_t amount = 1);
 
-    void merge(const counter& incoming_counter);
+    void merge(const Counter& other);
+    void merge(const CounterState& other);
 
     std::int64_t value() const;
+    const CounterState& state() const { return _state; }
 
-    const counter_state& get_state() const;
+  private:
+    std::string _client_id;
+    CounterState _state;
 };
+
+#endif

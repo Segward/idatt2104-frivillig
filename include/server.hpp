@@ -1,29 +1,42 @@
 #ifndef SERVER_HPP
 #define SERVER_HPP
 
-#include <condition_variable>
-#include <mutex>
-#include <string>
-#include <thread>
+#include <counter.hpp>
 #include <sockpp/tcp_acceptor.h>
 #include <sockpp/tcp_socket.h>
 
-class server
-{
+class Server {
   public:
-    server(const std::string& hostname, unsigned port);
-    ~server();
+    Server(const std::string& host, unsigned port);
+    ~Server();
+
+    Server(const Server&) = delete;
+    Server& operator=(const Server&) = delete;
+    Server(Server&&) = delete;
+    Server& operator=(Server&&) = delete;
+
     void start();
+    void stop();
     void join();
-    bool send(const std::string& data);
+
   private:
-    void wait_for_accept();
-    sockpp::tcp_acceptor acc;
-    sockpp::tcp_socket conn;
-    std::mutex m;
-    std::condition_variable cv;
-    bool accepted = false;
-    std::thread worker;
+    struct Connection {
+      std::shared_ptr<sockpp::tcp_socket> sock;
+      std::string id;
+    };
+
+    void accept_loop();
+    void handle_connection(std::shared_ptr<Connection> conn);
+    void broadcast_locked();
+
+    sockpp::tcp_acceptor _acc;
+    Counter _master;
+    std::mutex _mu;
+    std::vector<std::shared_ptr<Connection>> _conns;
+    std::thread _acceptor_thread;
+    std::vector<std::thread> _client_threads;
+    std::atomic<bool> _running{false};
+    std::uint64_t _next_id{1};
 };
 
 #endif
