@@ -13,16 +13,12 @@ private:
     std::string client_id;
     std::uint64_t local_sequence = 0;
 
-    // element_id -> text_character
     std::unordered_map<std::string, text_character> nodes;
 
-    // previous_id -> list of elements inserted after previous_id
     std::unordered_map<std::string, std::vector<std::string>> children;
 
-    // Used to avoid applying the same operation multiple times.
     std::unordered_set<std::string> applied_operations;
 
-    // Operations that arrived before their dependencies.
     std::vector<text_change> pending_changes;
 
     std::string next_id();
