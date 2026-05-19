@@ -24,6 +24,7 @@ add_library(shared STATIC
   src/shared/counter.cpp
   src/shared/packet.cpp
   src/shared/handler.cpp
+  src/shared/text_RGA.cpp
 )
 target_include_directories(shared PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(shared PUBLIC Sockpp::sockpp-static)
