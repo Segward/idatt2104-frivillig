@@ -1,16 +1,16 @@
 #include <list_RGA.hpp>
 
 #include <gtest/gtest.h>
-#include <vector>
 #include <string>
+#include <vector>
 
-TEST(ListRGATest, StartsEmpty) {
+TEST(list_test, starts_empty) {
     list_RGA list("A");
 
     EXPECT_TRUE(list.value().empty());
 }
 
-TEST(ListRGATest, InsertAtBeginningAddsItem) {
+TEST(list_test, insert_at_beginning_adds_item) {
     list_RGA list("A");
 
     list.insert_at_beginning("Milk");
@@ -20,7 +20,7 @@ TEST(ListRGATest, InsertAtBeginningAddsItem) {
     EXPECT_EQ(list.value(), expected);
 }
 
-TEST(ListRGATest, InsertAfterAddsItemAfterExistingItem) {
+TEST(list_test, insert_after_adds_item_after_existing_item) {
     list_RGA list("A");
 
     list_change milk = list.insert_at_beginning("Milk");
@@ -31,7 +31,7 @@ TEST(ListRGATest, InsertAfterAddsItemAfterExistingItem) {
     EXPECT_EQ(list.value(), expected);
 }
 
-TEST(ListRGATest, MultipleSequentialInsertsBuildList) {
+TEST(list_test, multiple_sequential_inserts_build_list) {
     list_RGA list("A");
 
     list_change milk = list.insert_at_beginning("Milk");
@@ -49,7 +49,7 @@ TEST(ListRGATest, MultipleSequentialInsertsBuildList) {
     EXPECT_EQ(list.value(), expected);
 }
 
-TEST(ListRGATest, EraseRemovesItemFromVisibleList) {
+TEST(list_test, erase_removes_item_from_visible_list) {
     list_RGA list("A");
 
     list_change milk = list.insert_at_beginning("Milk");
@@ -62,89 +62,89 @@ TEST(ListRGATest, EraseRemovesItemFromVisibleList) {
     EXPECT_EQ(list.value(), expected);
 }
 
-TEST(ListRGATest, ReplicatesInsertOperations) {
-    list_RGA list_A("A");
-    list_RGA list_B("B");
+TEST(list_test, replicates_insert_operations) {
+    list_RGA list_a("A");
+    list_RGA list_b("B");
 
-    list_change milk = list_A.insert_at_beginning("Milk");
-    list_change bread = list_A.insert_after(milk.element_id, "Bread");
+    list_change milk = list_a.insert_at_beginning("Milk");
+    list_change bread = list_a.insert_after(milk.element_id, "Bread");
 
-    list_B.apply(milk);
-    list_B.apply(bread);
+    list_b.apply(milk);
+    list_b.apply(bread);
 
     std::vector<std::string> expected = {"Milk", "Bread"};
 
-    EXPECT_EQ(list_A.value(), expected);
-    EXPECT_EQ(list_B.value(), expected);
+    EXPECT_EQ(list_a.value(), expected);
+    EXPECT_EQ(list_b.value(), expected);
 }
 
-TEST(ListRGATest, ReplicatesDeleteOperations) {
-    list_RGA list_A("A");
-    list_RGA list_B("B");
+TEST(list_test, replicates_delete_operations) {
+    list_RGA list_a("A");
+    list_RGA list_b("B");
 
-    list_change milk = list_A.insert_at_beginning("Milk");
-    list_change bread = list_A.insert_after(milk.element_id, "Bread");
-    list_change delete_milk = list_A.erase(milk.element_id);
+    list_change milk = list_a.insert_at_beginning("Milk");
+    list_change bread = list_a.insert_after(milk.element_id, "Bread");
+    list_change delete_milk = list_a.erase(milk.element_id);
 
-    list_B.apply(milk);
-    list_B.apply(bread);
-    list_B.apply(delete_milk);
+    list_b.apply(milk);
+    list_b.apply(bread);
+    list_b.apply(delete_milk);
 
     std::vector<std::string> expected = {"Bread"};
 
-    EXPECT_EQ(list_A.value(), expected);
-    EXPECT_EQ(list_B.value(), expected);
+    EXPECT_EQ(list_a.value(), expected);
+    EXPECT_EQ(list_b.value(), expected);
 }
 
-TEST(ListRGATest, DuplicateInsertOperationDoesNotDuplicateItem) {
-    list_RGA list_A("A");
-    list_RGA list_B("B");
+TEST(list_test, duplicate_insert_operation_does_not_duplicate_item) {
+    list_RGA list_a("A");
+    list_RGA list_b("B");
 
-    list_change milk = list_A.insert_at_beginning("Milk");
+    list_change milk = list_a.insert_at_beginning("Milk");
 
-    list_B.apply(milk);
-    list_B.apply(milk);
-    list_B.apply(milk);
+    list_b.apply(milk);
+    list_b.apply(milk);
+    list_b.apply(milk);
 
     std::vector<std::string> expected = {"Milk"};
 
-    EXPECT_EQ(list_B.value(), expected);
+    EXPECT_EQ(list_b.value(), expected);
 }
 
-TEST(ListRGATest, DuplicateDeleteOperationDoesNotBreakState) {
-    list_RGA list_A("A");
-    list_RGA list_B("B");
+TEST(list_test, duplicate_delete_operation_does_not_break_state) {
+    list_RGA list_a("A");
+    list_RGA list_b("B");
 
-    list_change milk = list_A.insert_at_beginning("Milk");
-    list_change delete_milk = list_A.erase(milk.element_id);
+    list_change milk = list_a.insert_at_beginning("Milk");
+    list_change delete_milk = list_a.erase(milk.element_id);
 
-    list_B.apply(milk);
-    list_B.apply(delete_milk);
-    list_B.apply(delete_milk);
-    list_B.apply(delete_milk);
+    list_b.apply(milk);
+    list_b.apply(delete_milk);
+    list_b.apply(delete_milk);
+    list_b.apply(delete_milk);
 
-    EXPECT_TRUE(list_B.value().empty());
+    EXPECT_TRUE(list_b.value().empty());
 }
 
-TEST(ListRGATest, ConcurrentInsertsAfterSameParentConverge) {
-    list_RGA list_A("A");
-    list_RGA list_B("B");
+TEST(list_test, concurrent_inserts_after_same_parent_converge) {
+    list_RGA list_a("A");
+    list_RGA list_b("B");
 
-    list_change milk = list_A.insert_at_beginning("Milk");
-    list_change bread = list_B.insert_at_beginning("Bread");
+    list_change milk = list_a.insert_at_beginning("Milk");
+    list_change bread = list_b.insert_at_beginning("Bread");
 
-    list_A.apply(bread);
-    list_B.apply(milk);
+    list_a.apply(bread);
+    list_b.apply(milk);
 
-    EXPECT_EQ(list_A.value(), list_B.value());
+    EXPECT_EQ(list_a.value(), list_b.value());
 }
 
-TEST(ListRGATest, ApplyingIndependentOperationsInDifferentOrdersConverges) {
-    list_RGA list_A("A");
-    list_RGA list_B("B");
+TEST(list_test, applying_independent_operations_in_different_orders_converges) {
+    list_RGA list_a("A");
+    list_RGA list_b("B");
 
-    list_change milk = list_A.insert_at_beginning("Milk");
-    list_change bread = list_B.insert_at_beginning("Bread");
+    list_change milk = list_a.insert_at_beginning("Milk");
+    list_change bread = list_b.insert_at_beginning("Bread");
 
     list_RGA result_1("C");
     result_1.apply(milk);
@@ -157,7 +157,7 @@ TEST(ListRGATest, ApplyingIndependentOperationsInDifferentOrdersConverges) {
     EXPECT_EQ(result_1.value(), result_2.value());
 }
 
-TEST(ListRGATest, ToStringFormatsListItems) {
+TEST(list_test, to_string_formats_list_items) {
     list_RGA list("A");
 
     list_change milk = list.insert_at_beginning("Milk");
@@ -170,13 +170,13 @@ TEST(ListRGATest, ToStringFormatsListItems) {
     EXPECT_EQ(list.to_string(), expected);
 }
 
-TEST(ListRGATest, EmptyItemThrowsInvalidArgument) {
+TEST(list_test, empty_item_throws_invalid_argument) {
     list_RGA list("A");
 
     EXPECT_THROW(list.insert_at_beginning(""), std::invalid_argument);
 }
 
-TEST(ListRGATest, InsertAfterUnknownElementThrowsInvalidArgument) {
+TEST(list_test, insert_after_unknown_element_throws_invalid_argument) {
     list_RGA list("A");
 
     EXPECT_THROW(
@@ -185,7 +185,7 @@ TEST(ListRGATest, InsertAfterUnknownElementThrowsInvalidArgument) {
     );
 }
 
-TEST(ListRGATest, EraseUnknownElementThrowsInvalidArgument) {
+TEST(list_test, erase_unknown_element_throws_invalid_argument) {
     list_RGA list("A");
 
     EXPECT_THROW(
