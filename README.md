@@ -16,6 +16,10 @@ git clone --recurse-submodules https://github.com/Segward/idatt2104-frivillig.gi
 cd idatt2104-frivillig
 ```
 
+> [!NOTE]
+> On Windows, use the `.ps1` equivalents in PowerShell
+> (e.g. `./scripts/cert.ps1`, `./scripts/build.ps1`).
+
 ## Setup
 Generate a self-signed placeholder cert into `./certs/`:
 
