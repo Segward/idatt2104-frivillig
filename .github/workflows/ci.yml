@@ -34,6 +34,9 @@ jobs:
       - name: Bootstrap vcpkg
         run: ./vcpkg/bootstrap-vcpkg.sh -disableMetrics
 
+      - name: Generate self-signed cert
+        run: ./scripts/cert.sh
+
       - name: Configure
         run: cmake --preset default
 
