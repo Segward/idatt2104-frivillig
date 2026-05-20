@@ -13,23 +13,26 @@ git clone --recurse-submodules https://github.com/Segward/idatt2104-frivillig.gi
 cd idatt2104-frivillig
 ```
 
-## Build
+## Setup
+Generate a self-signed placeholder cert into `./certs/`:
+
 ```sh
 ./scripts/cert.sh
-./scripts/build.sh
 ```
 
-## Run
-```sh
-./build/release/server
-```
-
-## Certificate
-`cert.sh` with no args generates a self-signed placeholder. For a real cert,
-pass a domain:
+For a real cert, pass a domain:
 
 ```sh
 sudo ./scripts/cert.sh [your domain]
+```
+
+## Build and run
+> [!IMPORTANT]
+> Complete the [Setup](#setup) first — the server won't start without certs.
+
+```sh
+./scripts/build.sh
+./build/release/server
 ```
 
 ## Third party
