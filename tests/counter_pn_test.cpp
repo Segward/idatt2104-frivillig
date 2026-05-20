@@ -1,15 +1,15 @@
-#include <counter.hpp>
+#include <counter_pn.hpp>
 
 #include <gtest/gtest.h>
 
 TEST(counter_test, starts_at_zero) {
-  Counter counter("A");
+  counter_pn counter("A");
 
   EXPECT_EQ(counter.value(), 0);
 }
 
 TEST(counter_test, increment_increases_value) {
-  Counter counter("A");
+  counter_pn counter("A");
 
   counter.increment();
 
@@ -17,7 +17,7 @@ TEST(counter_test, increment_increases_value) {
 }
 
 TEST(counter_test, increment_by_amount_increases_value) {
-  Counter counter("A");
+  counter_pn counter("A");
 
   counter.increment(5);
 
@@ -25,7 +25,7 @@ TEST(counter_test, increment_by_amount_increases_value) {
 }
 
 TEST(counter_test, decrement_decreases_value) {
-  Counter counter("A");
+  counter_pn counter("A");
 
   counter.increment(5);
   counter.decrement();
@@ -34,7 +34,7 @@ TEST(counter_test, decrement_decreases_value) {
 }
 
 TEST(counter_test, decrement_by_amount_decreases_value) {
-  Counter counter("A");
+  counter_pn counter("A");
 
   counter.increment(5);
   counter.decrement(4);
@@ -43,8 +43,8 @@ TEST(counter_test, decrement_by_amount_decreases_value) {
 }
 
 TEST(counter_test, merge_combines_value) {
-  Counter counter_a("A");
-  Counter counter_b("B");
+  counter_pn counter_a("A");
+  counter_pn counter_b("B");
 
   counter_a.increment(5);
   counter_b.decrement();
@@ -55,8 +55,8 @@ TEST(counter_test, merge_combines_value) {
 }
 
 TEST(counter_test, commutative_merge) {
-  Counter counter_a("A");
-  Counter counter_b("B");
+  counter_pn counter_a("A");
+  counter_pn counter_b("B");
 
   counter_a.increment(10);
   counter_a.decrement(2);
@@ -72,7 +72,7 @@ TEST(counter_test, commutative_merge) {
 }
 
 TEST(counter_test, idempotent_merge) {
-  Counter counter_a("A");
+  counter_pn counter_a("A");
 
   counter_a.increment(5);
 

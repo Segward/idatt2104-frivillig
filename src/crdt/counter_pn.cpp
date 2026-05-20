@@ -1,24 +1,24 @@
-#include <counter.hpp>
+#include <counter_pn.hpp>
 
-Counter::Counter(std::string client_id)
+counter_pn::counter_pn(std::string client_id)
   : _client_id(std::move(client_id)) {
   _state.increments[_client_id] = 0;
   _state.decrements[_client_id] = 0;
 }
 
-void Counter::increment(std::uint64_t amount) {
+void counter_pn::increment(std::uint64_t amount) {
   _state.increments[_client_id] += amount;
 }
 
-void Counter::decrement(std::uint64_t amount) {
+void counter_pn::decrement(std::uint64_t amount) {
   _state.decrements[_client_id] += amount;
 }
 
-void Counter::merge(const Counter& other) {
+void counter_pn::merge(const counter_pn& other) {
   merge(other._state);
 }
 
-void Counter::merge(const CounterState& other) {
+void counter_pn::merge(const counter_pn_state& other) {
   for (const auto& [id, incoming] : other.increments) {
     auto& current = _state.increments[id];
     current = std::max(current, incoming);
@@ -29,7 +29,7 @@ void Counter::merge(const CounterState& other) {
   }
 }
 
-std::int64_t Counter::value() const {
+std::int64_t counter_pn::value() const {
   std::int64_t total_increments = 0;
   std::int64_t total_decrements = 0;
 

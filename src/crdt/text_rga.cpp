@@ -1,4 +1,4 @@
-#include <text_RGA.hpp>
+#include <text_rga.hpp>
 
 #include <algorithm>
 #include <iomanip>

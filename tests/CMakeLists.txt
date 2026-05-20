@@ -8,7 +8,7 @@ add_executable(tests ${TEST_SOURCES})
 target_link_libraries(tests
     PRIVATE
         GTest::gtest_main
-        shared
+        crdt
 )
 
 gtest_discover_tests(tests)

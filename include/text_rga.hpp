@@ -1,4 +1,5 @@
-#pragma once
+#ifndef TEXT_RGA_HPP
+#define TEXT_RGA_HPP
 
 #include <cstdint>
 #include <string>
@@ -54,3 +55,5 @@ public:
 
     bool has_applied(const std::string& operation_id) const;
 };
+
+#endif
