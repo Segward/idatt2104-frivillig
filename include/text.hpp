@@ -1,4 +1,5 @@
-#pragma once
+#ifndef TEXT_HPP
+#define TEXT_HPP
 
 #include <string>
 
@@ -33,3 +34,5 @@ struct text_character {
     char value;
     bool deleted = false;
 };
+
+#endif

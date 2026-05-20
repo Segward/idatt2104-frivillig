@@ -1,4 +1,5 @@
-#pragma once
+#ifndef LIST_HPP
+#define LIST_HPP
 
 #include <string>
 
@@ -25,3 +26,5 @@ struct list_item {
     std::string value;
     bool deleted = false;
 };
+
+#endif

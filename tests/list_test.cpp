@@ -1,4 +1,4 @@
-#include <list_RGA.hpp>
+#include <list_rga.hpp>
 
 #include <gtest/gtest.h>
 #include <string>
