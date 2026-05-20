@@ -52,4 +52,5 @@ With a deployment open `https://[your domain]` instead.
 ## Third party
 - GoogleTest: C++ unit testing framework
 - uWebSockets: HTTP and WebSocket server with built-in TLS
+- OpenSSL: TLS backend used by uWebSockets
 - nlohmann/json: JSON parsing and serialization
