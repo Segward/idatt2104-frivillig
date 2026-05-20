@@ -39,7 +39,7 @@ sudo ./scripts/cert.sh [your domain]
 
 ## Build and run
 > [!IMPORTANT]
-> Complete the [Setup](#setup) first — the server won't start without certs.
+> Complete the [Setup](#setup) first since the server won't start without certs.
 
 ```sh
 ./scripts/build.sh
