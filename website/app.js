@@ -1,6 +1,4 @@
-const WS_URL = (location.protocol === "file:")
-  ? "ws://127.0.0.1:12345"
-  : `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}`;
+const WS_URL = `wss://${location.host}`;
 
 const counterValEl = document.getElementById("counter-val");
 const incBtn = document.getElementById("inc");
