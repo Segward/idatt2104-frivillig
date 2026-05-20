@@ -2,6 +2,7 @@
 #define LIST_HPP
 
 #include <string>
+#include <vector>
 
 enum class list_operation_type {
     Insert,
@@ -25,6 +26,10 @@ struct list_item {
     std::string previous_id;
     std::string value;
     bool deleted = false;
+};
+
+struct list_RGA_state {
+    std::vector<list_item> nodes;
 };
 
 #endif

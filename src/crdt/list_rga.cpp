@@ -148,6 +148,62 @@ void list_RGA::apply(const list_change& change) {
     applied_operations.insert(change.operation_id);
 }
 
+list_RGA_state list_RGA::state() const {
+    list_RGA_state snapshot;
+    snapshot.nodes.reserve(nodes.size());
+    for (const auto& [_, item] : nodes) {
+        snapshot.nodes.push_back(item);
+    }
+    return snapshot;
+}
+
+void list_RGA::merge(const list_RGA_state& other) {
+    // Multi-pass: a node can only be inserted once its previous_id is present.
+    std::vector<list_item> pending(other.nodes.begin(), other.nodes.end());
+
+    bool made_progress = true;
+    while (made_progress) {
+        made_progress = false;
+
+        auto iterator = pending.begin();
+        while (iterator != pending.end()) {
+            const list_item& incoming = *iterator;
+
+            auto existing = nodes.find(incoming.id);
+            if (existing != nodes.end()) {
+                // Tombstone join: deleted is a monotonic OR.
+                existing->second.deleted = existing->second.deleted || incoming.deleted;
+                iterator = pending.erase(iterator);
+                made_progress = true;
+                continue;
+            }
+
+            if (!incoming.previous_id.empty() &&
+                nodes.find(incoming.previous_id) == nodes.end()) {
+                ++iterator;
+                continue;
+            }
+
+            list_item item = incoming;
+            nodes.emplace(item.id, item);
+
+            auto& sibling_list = children[item.previous_id];
+            if (std::find(sibling_list.begin(), sibling_list.end(), item.id)
+                == sibling_list.end()) {
+                sibling_list.push_back(item.id);
+            }
+            std::sort(sibling_list.begin(), sibling_list.end());
+
+            children.try_emplace(item.id, std::vector<std::string>{});
+
+            applied_operations.insert(item.id);
+
+            iterator = pending.erase(iterator);
+            made_progress = true;
+        }
+    }
+}
+
 void list_RGA::render_from(
     const std::string& previous_id,
     std::vector<std::string>& output

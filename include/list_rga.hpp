@@ -41,6 +41,10 @@ public:
 
     void apply(const list_change& change);
 
+    list_RGA_state state() const;
+
+    void merge(const list_RGA_state& other);
+
     std::vector<std::string> value() const;
 
     std::string to_string() const;

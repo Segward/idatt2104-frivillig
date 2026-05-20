@@ -193,3 +193,79 @@ TEST(list_test, erase_unknown_element_throws_invalid_argument) {
         std::invalid_argument
     );
 }
+
+TEST(list_test, merge_into_empty_copies_all_nodes) {
+    list_RGA source("A");
+    list_change milk = source.insert_at_beginning("Milk");
+    source.insert_after(milk.element_id, "Bread");
+
+    list_RGA target("B");
+    target.merge(source.state());
+
+    EXPECT_EQ(target.value(), source.value());
+}
+
+TEST(list_test, merge_is_idempotent) {
+    list_RGA source("A");
+    source.insert_at_beginning("Milk");
+
+    list_RGA target("B");
+    target.merge(source.state());
+    target.merge(source.state());
+    target.merge(source.state());
+
+    EXPECT_EQ(target.value(), source.value());
+}
+
+TEST(list_test, merge_tombstone_wins_when_remote_deleted) {
+    list_RGA source("A");
+    list_change milk = source.insert_at_beginning("Milk");
+    source.insert_after(milk.element_id, "Bread");
+
+    list_RGA target("B");
+    target.merge(source.state());
+
+    // Delete on source side, then merge back into target.
+    source.erase(milk.element_id);
+    target.merge(source.state());
+
+    std::vector<std::string> expected = {"Bread"};
+    EXPECT_EQ(target.value(), expected);
+}
+
+TEST(list_test, merge_tombstone_wins_when_local_deleted) {
+    list_RGA source("A");
+    list_change milk = source.insert_at_beginning("Milk");
+    source.insert_after(milk.element_id, "Bread");
+
+    list_RGA target("B");
+    target.merge(source.state());
+
+    // Capture pre-delete remote state; delete locally; merge older state in.
+    list_RGA_state pre_delete = source.state();
+    list_change delete_milk = source.erase(milk.element_id);
+    target.apply(delete_milk);
+
+    target.merge(pre_delete);
+
+    std::vector<std::string> expected = {"Bread"};
+    EXPECT_EQ(target.value(), expected);
+}
+
+TEST(list_test, merge_commutative_across_replicas) {
+    list_RGA a("A");
+    list_RGA b("B");
+
+    a.insert_at_beginning("Milk");
+    b.insert_at_beginning("Bread");
+
+    list_RGA replica_1("X");
+    replica_1.merge(a.state());
+    replica_1.merge(b.state());
+
+    list_RGA replica_2("Y");
+    replica_2.merge(b.state());
+    replica_2.merge(a.state());
+
+    EXPECT_EQ(replica_1.value(), replica_2.value());
+}

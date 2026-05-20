@@ -11,16 +11,34 @@ namespace {
 
   struct PerSocketData {
     std::string id;
+    std::uint64_t id_number{0};
   };
 
   // WEBSITE_INDEX is baked in by CMake and points to the copy of website/
-  // installed next to the server binary at build time.
-  std::string load_index_html() {
-    std::ifstream f(WEBSITE_INDEX);
+  // installed next to the server binary at build time. Sibling assets live
+  // in the same directory.
+  std::string load_text_file(const std::string& path) {
+    std::ifstream f(path);
     if (!f) return {};
     std::ostringstream ss;
     ss << f.rdbuf();
     return ss.str();
+  }
+
+  std::string website_sibling(const std::string& filename) {
+    std::string index = WEBSITE_INDEX;
+    auto slash = index.find_last_of('/');
+    if (slash == std::string::npos) return filename;
+    return index.substr(0, slash + 1) + filename;
+  }
+
+  std::uint64_t lowest_unused(const std::set<std::uint64_t>& used) {
+    std::uint64_t candidate = 1;
+    for (std::uint64_t id : used) {
+      if (id != candidate) break;
+      ++candidate;
+    }
+    return candidate;
   }
 }
 
@@ -55,12 +73,14 @@ void Server::join() {
 }
 
 void Server::run_loop() {
-  // Track live sockets so stop() can drop them; only touched on the loop thread.
+  // All loop-thread-only state lives here.
   using WS = uWS::WebSocket<false, true, PerSocketData>;
   std::set<WS*> conns;
-  std::uint64_t next_id = _next_id;
+  std::set<std::uint64_t> used_ids;
 
-  const std::string index_html = load_index_html();
+  const std::string index_html = load_text_file(WEBSITE_INDEX);
+  const std::string style_css = load_text_file(website_sibling("style.css"));
+  const std::string app_js = load_text_file(website_sibling("app.js"));
 
   auto app = uWS::App();
 
@@ -74,26 +94,35 @@ void Server::run_loop() {
     res->writeHeader("Content-Type", "text/html; charset=utf-8")->end(index_html);
   });
 
+  app.get("/style.css", [&](auto* res, auto* /*req*/) {
+    res->writeHeader("Content-Type", "text/css; charset=utf-8")->end(style_css);
+  });
+
+  app.get("/app.js", [&](auto* res, auto* /*req*/) {
+    res->writeHeader("Content-Type", "application/javascript; charset=utf-8")->end(app_js);
+  });
+
   app.ws<PerSocketData>("/*", {
     .compression = uWS::DISABLED,
     .open = [&](auto* ws) {
       auto* data = ws->getUserData();
-      data->id = "client-" + std::to_string(next_id++);
+      data->id_number = lowest_unused(used_ids);
+      used_ids.insert(data->id_number);
+      data->id = "client-" + std::to_string(data->id_number);
       conns.insert(ws);
       ws->subscribe(kBroadcastTopic);
       ws->send(Handler::encode_auth(data->id), uWS::OpCode::TEXT);
       ws->send(Handler::encode_counter(_master_counter.state()), uWS::OpCode::TEXT);
-      ws->send(Handler::encode_list_init(_list_ops), uWS::OpCode::TEXT);
-      ws->send(Handler::encode_text_init(_text_ops), uWS::OpCode::TEXT);
+      ws->send(Handler::encode_list_state(_master_list.state()), uWS::OpCode::TEXT);
+      ws->send(Handler::encode_text_state(_master_text.state()), uWS::OpCode::TEXT);
       printf("[server] %s connected (total=%zu)\n", data->id.c_str(), conns.size());
     },
     .message = [&](auto* ws, std::string_view msg, uWS::OpCode /*op*/) {
       auto* data = ws->getUserData();
       const std::string payload(msg);
 
-      if (auto counter_in = Handler::decode_counter(payload)) {
-        Handler handler(_master_counter, data->id);
-        handler.apply(payload);
+      if (auto incoming = Handler::decode_counter(payload)) {
+        _master_counter.merge(*incoming);
         const auto state_msg = Handler::encode_counter(_master_counter.state());
         ws->publish(kBroadcastTopic, state_msg, uWS::OpCode::TEXT);
         ws->send(state_msg, uWS::OpCode::TEXT);
@@ -102,36 +131,22 @@ void Server::run_loop() {
         return;
       }
 
-      if (auto op = Handler::decode_list_op(payload)) {
-        if (_master_list.has_applied(op->operation_id)) return;
-        try {
-          _master_list.apply(*op);
-        } catch (const std::exception& e) {
-          fprintf(stderr, "[server] list op from %s rejected: %s\n",
-                  data->id.c_str(), e.what());
-          return;
-        }
-        _list_ops.push_back(*op);
-        const auto op_msg = Handler::encode_list_op(*op);
-        ws->publish(kBroadcastTopic, op_msg, uWS::OpCode::TEXT);
-        printf("[server] list op from %s; size=%zu\n",
+      if (auto incoming = Handler::decode_list_state(payload)) {
+        _master_list.merge(*incoming);
+        const auto state_msg = Handler::encode_list_state(_master_list.state());
+        ws->publish(kBroadcastTopic, state_msg, uWS::OpCode::TEXT);
+        ws->send(state_msg, uWS::OpCode::TEXT);
+        printf("[server] list merged from %s; size=%zu\n",
                data->id.c_str(), _master_list.value().size());
         return;
       }
 
-      if (auto op = Handler::decode_text_op(payload)) {
-        if (_master_text.has_applied(op->operation_id)) return;
-        try {
-          _master_text.apply(*op);
-        } catch (const std::exception& e) {
-          fprintf(stderr, "[server] text op from %s rejected: %s\n",
-                  data->id.c_str(), e.what());
-          return;
-        }
-        _text_ops.push_back(*op);
-        const auto op_msg = Handler::encode_text_op(*op);
-        ws->publish(kBroadcastTopic, op_msg, uWS::OpCode::TEXT);
-        printf("[server] text op from %s; len=%zu\n",
+      if (auto incoming = Handler::decode_text_state(payload)) {
+        _master_text.merge(*incoming);
+        const auto state_msg = Handler::encode_text_state(_master_text.state());
+        ws->publish(kBroadcastTopic, state_msg, uWS::OpCode::TEXT);
+        ws->send(state_msg, uWS::OpCode::TEXT);
+        printf("[server] text merged from %s; len=%zu\n",
                data->id.c_str(), _master_text.value().size());
         return;
       }
@@ -139,6 +154,7 @@ void Server::run_loop() {
     .close = [&](auto* ws, int /*code*/, std::string_view /*msg*/) {
       auto* data = ws->getUserData();
       conns.erase(ws);
+      used_ids.erase(data->id_number);
       printf("[server] %s disconnected (total=%zu)\n", data->id.c_str(), conns.size());
     },
   });
@@ -155,6 +171,5 @@ void Server::run_loop() {
   });
 
   app.run();
-  _next_id = next_id;
   _running = false;
 }

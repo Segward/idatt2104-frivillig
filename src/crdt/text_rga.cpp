@@ -204,6 +204,60 @@ void text_RGA::retry_pending_changes() {
     }
 }
 
+text_RGA_state text_RGA::state() const {
+    text_RGA_state snapshot;
+    snapshot.nodes.reserve(nodes.size());
+    for (const auto& [_, character] : nodes) {
+        snapshot.nodes.push_back(character);
+    }
+    return snapshot;
+}
+
+void text_RGA::merge(const text_RGA_state& other) {
+    std::vector<text_character> pending(other.nodes.begin(), other.nodes.end());
+
+    bool made_progress = true;
+    while (made_progress) {
+        made_progress = false;
+
+        auto iterator = pending.begin();
+        while (iterator != pending.end()) {
+            const text_character& incoming = *iterator;
+
+            auto existing = nodes.find(incoming.id);
+            if (existing != nodes.end()) {
+                existing->second.deleted = existing->second.deleted || incoming.deleted;
+                iterator = pending.erase(iterator);
+                made_progress = true;
+                continue;
+            }
+
+            if (!incoming.previous_id.empty() &&
+                nodes.find(incoming.previous_id) == nodes.end()) {
+                ++iterator;
+                continue;
+            }
+
+            text_character character = incoming;
+            nodes.emplace(character.id, character);
+
+            auto& sibling_list = children[character.previous_id];
+            if (std::find(sibling_list.begin(), sibling_list.end(), character.id)
+                == sibling_list.end()) {
+                sibling_list.push_back(character.id);
+            }
+            std::sort(sibling_list.begin(), sibling_list.end());
+
+            children.try_emplace(character.id, std::vector<std::string>{});
+
+            applied_operations.insert(character.id);
+
+            iterator = pending.erase(iterator);
+            made_progress = true;
+        }
+    }
+}
+
 //Create text from given element
 void text_RGA::render_from(
     const std::string& previous_id,
