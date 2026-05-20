@@ -1,5 +1,9 @@
 {
   "name": "idatt2104",
   "version-string": "0.1.0",
-  "dependencies": ["gtest", "uwebsockets", "nlohmann-json"]
+  "dependencies": [
+    "gtest",
+    { "name": "uwebsockets", "features": ["ssl"] },
+    "nlohmann-json"
+  ]
 }

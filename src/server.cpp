@@ -1,5 +1,6 @@
 #include <server.hpp>
 #include <handler.hpp>
+#include <messages.hpp>
 
 #include <fstream>
 #include <set>
@@ -74,7 +75,7 @@ void Server::join() {
 
 void Server::run_loop() {
   // All loop-thread-only state lives here.
-  using WS = uWS::WebSocket<false, true, PerSocketData>;
+  using WS = uWS::WebSocket<true, true, PerSocketData>;
   std::set<WS*> conns;
   std::set<std::uint64_t> used_ids;
 
@@ -82,7 +83,10 @@ void Server::run_loop() {
   const std::string style_css = load_text_file(website_sibling("style.css"));
   const std::string app_js = load_text_file(website_sibling("app.js"));
 
-  auto app = uWS::App();
+  auto app = uWS::SSLApp({
+    .key_file_name = default_key_path,
+    .cert_file_name = default_cert_path,
+  });
 
   app.get("/", [&](auto* res, auto* /*req*/) {
     if (index_html.empty()) {
