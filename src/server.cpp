@@ -170,7 +170,7 @@ void Server::run_loop() {
     }
     _listen_socket.store(listen_socket);
     _loop.store(uWS::Loop::get());
-    printf("[server] listening on %s:%u\n", _host.c_str(), _port);
+    printf("[server] open https://localhost:%u (Ctrl-C to quit)\n", _port);
   });
 
   app.run();
