@@ -8,6 +8,9 @@
 - vcpkg build tools: `make`, `pkg-config`, `curl`, `zip`, `unzip`, `tar`
 
 ## Install
+> [!IMPORTANT]
+> Clone with `--recurse-submodules` — vcpkg is vendored as a submodule.
+
 ```sh
 git clone --recurse-submodules https://github.com/Segward/idatt2104-frivillig.git
 cd idatt2104-frivillig
