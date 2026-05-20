@@ -1,6 +1,5 @@
 #include <server.hpp>
 #include <handler.hpp>
-#include <messages.hpp>
 
 #include <fstream>
 #include <set>
@@ -84,8 +83,8 @@ void Server::run_loop() {
   const std::string app_js = load_text_file(website_sibling("app.js"));
 
   auto app = uWS::SSLApp({
-    .key_file_name = default_key_path,
-    .cert_file_name = default_cert_path,
+    .key_file_name = KEY_PATH,
+    .cert_file_name = CERT_PATH,
   });
 
   app.get("/", [&](auto* res, auto* /*req*/) {

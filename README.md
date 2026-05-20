@@ -3,50 +3,40 @@
 ## Requirements
 - CMake 3.25+
 - A C++23 compiler
-- Git (with submodules)
+- OpenSSL
+- Git
+- vcpkg build tools: `make`, `pkg-config`, `curl`, `zip`, `unzip`, `tar`
 
 ## Install
-To install this project you need to clone this repository:
-
 ```sh
-git clone https://github.com/Segward/idatt2104-frivillig.git
-```
-
-This project uses [vcpkg](https://github.com/microsoft/vcpkg) as a git submodule.
-After cloning the project you need to initialize it:
-
-```sh
-git submodule update --init --recursive
+git clone --recurse-submodules https://github.com/Segward/idatt2104-frivillig.git
+cd idatt2104-frivillig
 ```
 
 ## Build
-Configure and build using the provided CMake preset:
-
 ```sh
-cmake --preset default
-cmake --build --preset default
+./scripts/build.sh
 ```
-
-The server executable is written to `build/server`.
 
 ## Run
-Start the server:
-
 ```sh
-./build/server
+./build/release/server
 ```
 
-Then open <http://127.0.0.1:12345/> in a browser. The server hosts the demo page
-and the WebSocket endpoint on the same port. Open the URL in multiple tabs to see
-the counter sync live.
-
-## Unit tests
+## Certificate
+Generate a self-signed placeholder:
 
 ```sh
-ctest --preset default
+./scripts/cert.sh
 ```
 
-## Third party dependencies
-- GoogleTest; Google C++ testing and mocking framework.
-- uWebSockets; WebSocket server library.
-- nlohmann/json; JSON for Modern C++.
+For a real cert, pass a domain:
+
+```sh
+sudo ./scripts/cert.sh [your domain]
+```
+
+## Third party
+- GoogleTest: C++ unit testing framework
+- uWebSockets: HTTP and WebSocket server with built-in TLS
+- nlohmann/json: JSON parsing and serialization

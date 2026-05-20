@@ -41,21 +41,23 @@ add_executable(server
   src/main.cpp
   src/server.cpp
 )
+set_target_properties(server PROPERTIES
+  RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/release"
+)
 target_link_libraries(server PRIVATE
   crdt
   unofficial::uwebsockets::uwebsockets
 )
 
-# Mirror the website assets next to the server binary so they're always at a
-# fixed path relative to the executable.
 add_custom_command(TARGET server POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy_directory
     "${CMAKE_SOURCE_DIR}/website"
     "$<TARGET_FILE_DIR:server>/website"
-  COMMENT "Copying website/ next to server binary"
 )
 target_compile_definitions(server PRIVATE
-  "WEBSITE_INDEX=\"$<TARGET_FILE_DIR:server>/website/index.html\"")
+  "WEBSITE_INDEX=\"$<TARGET_FILE_DIR:server>/website/index.html\""
+  "CERT_PATH=\"${CMAKE_SOURCE_DIR}/certs/fullchain.pem\""
+  "KEY_PATH=\"${CMAKE_SOURCE_DIR}/certs/privkey.pem\"")
 
 enable_testing()
 add_subdirectory(tests)
