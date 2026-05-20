@@ -1,0 +1,83 @@
+body {
+  font-family: system-ui, sans-serif;
+  max-width: 32rem;
+  margin: 3rem auto;
+  padding: 0 1rem;
+}
+
+section {
+  border: 1px solid #ddd;
+  border-radius: 0.5rem;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+section h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #666;
+}
+
+#counter-val {
+  font-size: 4rem;
+  margin: 0;
+  text-align: center;
+}
+
+#counter-buttons {
+  text-align: center;
+  margin-top: 0.5rem;
+}
+
+button {
+  font-size: 1rem;
+  padding: 0.4rem 1rem;
+}
+
+#list-add {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+#list-add input {
+  flex: 1;
+  padding: 0.4rem 0.6rem;
+  font-size: 1rem;
+}
+
+ul#list-items {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+ul#list-items li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.4rem 0.6rem;
+  border-bottom: 1px solid #eee;
+}
+
+ul#list-items li button {
+  font-size: 0.85rem;
+  padding: 0.2rem 0.5rem;
+}
+
+#text-area {
+  width: 100%;
+  min-height: 8rem;
+  font-family: ui-monospace, monospace;
+  font-size: 0.95rem;
+  padding: 0.5rem;
+  box-sizing: border-box;
+}
+
+#status {
+  color: #666;
+  font-size: 0.85rem;
+  text-align: center;
+}

@@ -1,29 +1,39 @@
 #ifndef SERVER_HPP
 #define SERVER_HPP
 
-#include <condition_variable>
-#include <mutex>
-#include <string>
-#include <thread>
-#include <sockpp/tcp_acceptor.h>
-#include <sockpp/tcp_socket.h>
+#include <counter_pn.hpp>
+#include <list_rga.hpp>
+#include <text_rga.hpp>
 
-class server
-{
+struct us_listen_socket_t;
+namespace uWS { class Loop; }
+
+class Server {
   public:
-    server(const std::string& hostname, unsigned port);
-    ~server();
+    Server(const std::string& host, unsigned port);
+    ~Server();
+
+    Server(const Server&) = delete;
+    Server& operator=(const Server&) = delete;
+    Server(Server&&) = delete;
+    Server& operator=(Server&&) = delete;
+
     void start();
+    void stop();
     void join();
-    bool send(const std::string& data);
+
   private:
-    void wait_for_accept();
-    sockpp::tcp_acceptor acc;
-    sockpp::tcp_socket conn;
-    std::mutex m;
-    std::condition_variable cv;
-    bool accepted = false;
-    std::thread worker;
+    void run_loop();
+
+    std::string _host;
+    unsigned _port;
+    counter_pn _master_counter;
+    list_RGA _master_list;
+    text_RGA _master_text;
+    std::thread _io_thread;
+    std::atomic<bool> _running{false};
+    std::atomic<uWS::Loop*> _loop{nullptr};
+    std::atomic<us_listen_socket_t*> _listen_socket{nullptr};
 };
 
 #endif

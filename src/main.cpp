@@ -1,25 +1,16 @@
-#include <client.hpp>
 #include <server.hpp>
-#include <chrono>
-#include <cstdio>
-#include <thread>
-#include <sockpp/version.h>
+#include <messages.hpp>
 
-int main()
-{
-  printf("sockpp %s\n", sockpp::SOCKPP_VERSION.c_str());
-  sockpp::initialize();
+int main() {
+  try {
+    Server server(default_host, default_port);
+    server.start();
+    printf("[server] listening on %s:%u (Ctrl-C to quit)\n", default_host, default_port);
+    server.join();
+  } catch (const std::exception& error) {
+    std::cerr << error.what() << '\n';
+    return EXIT_FAILURE;
+  }
 
-  const unsigned port = 12345;
-  server srv("127.0.0.1", port);
-  client user("127.0.0.1", port);
-
-  srv.start();
-  user.start();
-
-  user.send("hello from client");
-  srv.send("hello from server");
-
-  std::this_thread::sleep_for(std::chrono::milliseconds(200));
-  return 0;
+  return EXIT_SUCCESS;
 }

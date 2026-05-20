@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>crdt demo</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <section>
+    <h2>PN counter</h2>
+    <h1 id="counter-val">0</h1>
+    <div id="counter-buttons">
+      <button id="dec">−</button>
+      <button id="inc">+</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>RGA list</h2>
+    <div id="list-add">
+      <input id="list-input" type="text" placeholder="new item" />
+      <button id="list-add-btn">add</button>
+    </div>
+    <ul id="list-items"></ul>
+  </section>
+
+  <section>
+    <h2>RGA text</h2>
+    <textarea id="text-area" placeholder="collaborative text…"></textarea>
+  </section>
+
+  <div id="status">connecting…</div>
+
+  <script src="app.js"></script>
+</body>
+</html>

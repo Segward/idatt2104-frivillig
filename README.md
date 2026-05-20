@@ -27,13 +27,18 @@ cmake --preset default
 cmake --build --preset default
 ```
 
-The executable is written to `build/idatt2104`.
+The server executable is written to `build/server`.
 
 ## Run
+Start the server:
 
 ```sh
-./build/idatt2104
+./build/server
 ```
+
+Then open <http://127.0.0.1:12345/> in a browser. The server hosts the demo page
+and the WebSocket endpoint on the same port. Open the URL in multiple tabs to see
+the counter sync live.
 
 ## Unit tests
 
@@ -43,4 +48,5 @@ ctest --preset default
 
 ## Third party dependencies
 - GoogleTest; Google C++ testing and mocking framework.
-- Sockpp; Modern C++ socket library.
+- uWebSockets; WebSocket server library.
+- nlohmann/json; JSON for Modern C++.
