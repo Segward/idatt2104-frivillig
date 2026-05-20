@@ -15,6 +15,7 @@ cd idatt2104-frivillig
 
 ## Build
 ```sh
+./scripts/cert.sh
 ./scripts/build.sh
 ```
 
@@ -24,13 +25,8 @@ cd idatt2104-frivillig
 ```
 
 ## Certificate
-Generate a self-signed placeholder:
-
-```sh
-./scripts/cert.sh
-```
-
-For a real cert, pass a domain:
+`cert.sh` with no args generates a self-signed placeholder. For a real cert,
+pass a domain:
 
 ```sh
 sudo ./scripts/cert.sh [your domain]

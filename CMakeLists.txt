@@ -53,11 +53,14 @@ add_custom_command(TARGET server POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy_directory
     "${CMAKE_SOURCE_DIR}/website"
     "$<TARGET_FILE_DIR:server>/website"
+  COMMAND ${CMAKE_COMMAND} -E copy_directory
+    "${CMAKE_SOURCE_DIR}/certs"
+    "$<TARGET_FILE_DIR:server>/certs"
 )
 target_compile_definitions(server PRIVATE
   "WEBSITE_INDEX=\"$<TARGET_FILE_DIR:server>/website/index.html\""
-  "CERT_PATH=\"${CMAKE_SOURCE_DIR}/certs/fullchain.pem\""
-  "KEY_PATH=\"${CMAKE_SOURCE_DIR}/certs/privkey.pem\"")
+  "CERT_PATH=\"$<TARGET_FILE_DIR:server>/certs/fullchain.pem\""
+  "KEY_PATH=\"$<TARGET_FILE_DIR:server>/certs/privkey.pem\"")
 
 enable_testing()
 add_subdirectory(tests)
