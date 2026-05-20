@@ -29,6 +29,10 @@ For a real cert, pass a domain:
 sudo ./scripts/cert.sh [your domain]
 ```
 
+> [!NOTE]
+> Point the domain at this machine, forward port 80 to 80 (for cert
+> issuance), and 443 to 12345 (the port the server listens on).
+
 ## Build and run
 > [!IMPORTANT]
 > Complete the [Setup](#setup) first — the server won't start without certs.
