@@ -46,9 +46,8 @@ sudo ./scripts/cert.sh [your domain]
 ./build/release/server
 ```
 
-Then open `https://localhost:12345` in your browser. With the self-signed
-cert you'll get a security warning — accept it to proceed. With a real
-domain cert, open `https://[your domain]` instead.
+Then open `https://localhost:12345` in your browser. 
+With a deployment open `https://[your domain]` instead.
 
 ## Third party
 - GoogleTest: C++ unit testing framework
