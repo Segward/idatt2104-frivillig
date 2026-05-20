@@ -1,5 +1,9 @@
 # idatt2104-frivillig
 
+> [!NOTE]
+> On Windows, use the `.ps1` equivalents of the scripts below in PowerShell
+> (e.g. `./scripts/cert.ps1`, `./scripts/build.ps1`).
+
 ## Requirements
 - CMake 3.25+
 - A C++23 compiler
@@ -15,10 +19,6 @@
 git clone --recurse-submodules https://github.com/Segward/idatt2104-frivillig.git
 cd idatt2104-frivillig
 ```
-
-> [!NOTE]
-> On Windows, use the `.ps1` equivalents in PowerShell
-> (e.g. `./scripts/cert.ps1`, `./scripts/build.ps1`).
 
 ## Setup
 Generate a self-signed placeholder cert into `./certs/`:
