@@ -51,6 +51,10 @@ public:
 
     void apply(const text_change& change);
 
+    text_RGA_state state() const;
+
+    void merge(const text_RGA_state& other);
+
     std::string value() const;
 
     bool has_applied(const std::string& operation_id) const;

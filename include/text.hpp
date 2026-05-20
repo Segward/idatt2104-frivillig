@@ -2,6 +2,7 @@
 #define TEXT_HPP
 
 #include <string>
+#include <vector>
 
 enum class text_operation_type {
     Insert,
@@ -33,6 +34,10 @@ struct text_character {
     std::string previous_id;
     char value;
     bool deleted = false;
+};
+
+struct text_RGA_state {
+    std::vector<text_character> nodes;
 };
 
 #endif

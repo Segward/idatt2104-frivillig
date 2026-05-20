@@ -29,14 +29,11 @@ class Server {
     unsigned _port;
     counter_pn _master_counter;
     list_RGA _master_list;
-    std::vector<list_change> _list_ops;
     text_RGA _master_text;
-    std::vector<text_change> _text_ops;
     std::thread _io_thread;
     std::atomic<bool> _running{false};
     std::atomic<uWS::Loop*> _loop{nullptr};
     std::atomic<us_listen_socket_t*> _listen_socket{nullptr};
-    std::uint64_t _next_id{1};
 };
 
 #endif

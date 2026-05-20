@@ -77,3 +77,75 @@ TEST(TextRGATest, ReplicatesDeleteOperations) {
     EXPECT_EQ(text_A.value(), "i");
     EXPECT_EQ(text_B.value(), "i");
 }
+TEST(TextRGATest, MergeIntoEmptyCopiesAllNodes) {
+    text_RGA source("A");
+    text_change h = source.insert_at_beginning('H');
+    source.insert_after(h.element_id, 'i');
+
+    text_RGA target("B");
+    target.merge(source.state());
+
+    EXPECT_EQ(target.value(), source.value());
+}
+
+TEST(TextRGATest, MergeIsIdempotent) {
+    text_RGA source("A");
+    text_change h = source.insert_at_beginning('H');
+    source.insert_after(h.element_id, 'i');
+
+    text_RGA target("B");
+    target.merge(source.state());
+    target.merge(source.state());
+    target.merge(source.state());
+
+    EXPECT_EQ(target.value(), source.value());
+}
+
+TEST(TextRGATest, MergeTombstoneWinsWhenRemoteDeleted) {
+    text_RGA source("A");
+    text_change h = source.insert_at_beginning('H');
+    source.insert_after(h.element_id, 'i');
+
+    text_RGA target("B");
+    target.merge(source.state());
+
+    source.erase(h.element_id);
+    target.merge(source.state());
+
+    EXPECT_EQ(target.value(), "i");
+}
+
+TEST(TextRGATest, MergeTombstoneWinsWhenLocalDeleted) {
+    text_RGA source("A");
+    text_change h = source.insert_at_beginning('H');
+    source.insert_after(h.element_id, 'i');
+
+    text_RGA target("B");
+    target.merge(source.state());
+
+    text_RGA_state pre_delete = source.state();
+    text_change delete_h = source.erase(h.element_id);
+    target.apply(delete_h);
+
+    target.merge(pre_delete);
+
+    EXPECT_EQ(target.value(), "i");
+}
+
+TEST(TextRGATest, MergeCommutativeAcrossReplicas) {
+    text_RGA a("A");
+    text_RGA b("B");
+
+    a.insert_at_beginning('H');
+    b.insert_at_beginning('B');
+
+    text_RGA replica_1("X");
+    replica_1.merge(a.state());
+    replica_1.merge(b.state());
+
+    text_RGA replica_2("Y");
+    replica_2.merge(b.state());
+    replica_2.merge(a.state());
+
+    EXPECT_EQ(replica_1.value(), replica_2.value());
+}
