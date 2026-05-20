@@ -31,15 +31,6 @@ namespace {
     if (slash == std::string::npos) return filename;
     return index.substr(0, slash + 1) + filename;
   }
-
-  std::uint64_t lowest_unused(const std::set<std::uint64_t>& used) {
-    std::uint64_t candidate = 1;
-    for (std::uint64_t id : used) {
-      if (id != candidate) break;
-      ++candidate;
-    }
-    return candidate;
-  }
 }
 
 Server::Server(const std::string& host, unsigned port)
@@ -76,7 +67,7 @@ void Server::run_loop() {
   // All loop-thread-only state lives here.
   using WS = uWS::WebSocket<true, true, PerSocketData>;
   std::set<WS*> conns;
-  std::set<std::uint64_t> used_ids;
+  std::uint64_t next_id_number = 0;
 
   const std::string index_html = load_text_file(WEBSITE_INDEX);
   const std::string style_css = load_text_file(website_sibling("style.css"));
@@ -109,8 +100,7 @@ void Server::run_loop() {
     .compression = uWS::DISABLED,
     .open = [&](auto* ws) {
       auto* data = ws->getUserData();
-      data->id_number = lowest_unused(used_ids);
-      used_ids.insert(data->id_number);
+      data->id_number = ++next_id_number;
       data->id = "client-" + std::to_string(data->id_number);
       conns.insert(ws);
       ws->subscribe(kBroadcastTopic);
@@ -157,7 +147,6 @@ void Server::run_loop() {
     .close = [&](auto* ws, int /*code*/, std::string_view /*msg*/) {
       auto* data = ws->getUserData();
       conns.erase(ws);
-      used_ids.erase(data->id_number);
       printf("[server] %s disconnected (total=%zu)\n", data->id.c_str(), conns.size());
     },
   });
