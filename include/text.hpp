@@ -24,15 +24,15 @@ struct text_change {
     // For Delete: unused.
     std::string previous_id;
 
-    // For Insert: the character to insert.
+    // For Insert: the character to insert (one UTF-8 codepoint).
     // For Delete: unused.
-    char value{};
+    std::string value;
 };
 
 struct text_character {
     std::string id;
     std::string previous_id;
-    char value;
+    std::string value;
     bool deleted = false;
 };
 

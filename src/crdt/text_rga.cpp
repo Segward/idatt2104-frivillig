@@ -48,14 +48,14 @@ bool text_RGA::pending_contains(const std::string& operation_id) const {
 }
 
 //Insert text at beginning if string; empty string
-text_change text_RGA::insert_at_beginning(char value) {
-    return insert_after("", value);
+text_change text_RGA::insert_at_beginning(std::string value) {
+    return insert_after("", std::move(value));
 }
 
 //Insert text after a given character ID
 text_change text_RGA::insert_after(
     const std::string& previous_id,
-    char value
+    std::string value
 ) {
     if (!previous_id.empty() && !node_exists(previous_id)) {
         throw std::invalid_argument("Cannot insert after unknown element");
@@ -68,7 +68,7 @@ text_change text_RGA::insert_after(
     change.operation_id = new_element_id;
     change.element_id = new_element_id;
     change.previous_id = previous_id;
-    change.value = value;
+    change.value = std::move(value);
 
     apply(change);
 
@@ -88,7 +88,7 @@ text_change text_RGA::erase(const std::string& element_id) {
     change.operation_id = operation_id;
     change.element_id = element_id;
     change.previous_id = "";
-    change.value = '\0';
+    change.value.clear();
 
     apply(change);
 
@@ -273,7 +273,7 @@ void text_RGA::render_from(
         const text_character& child = nodes.at(child_id);
 
         if (!child.deleted) {
-            output.push_back(child.value);
+            output.append(child.value);
         }
 
         render_from(child_id, output);

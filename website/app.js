@@ -8,6 +8,7 @@ const listInput = document.getElementById("list-input");
 const listAddBtn = document.getElementById("list-add-btn");
 const textArea = document.getElementById("text-area");
 const statusEl = document.getElementById("status");
+const syncBtn = document.getElementById("sync-btn");
 
 let clientId = null;
 let ws = null;
@@ -46,14 +47,12 @@ function counterBumpInc() {
   if (!clientId) return;
   counterState.increments[clientId] = (counterState.increments[clientId] || 0) + 1;
   counterRecompute();
-  counterSend();
 }
 
 function counterBumpDec() {
   if (!clientId) return;
   counterState.decrements[clientId] = (counterState.decrements[clientId] || 0) + 1;
   counterRecompute();
-  counterSend();
 }
 
 incBtn.addEventListener("click", counterBumpInc);
@@ -180,7 +179,6 @@ function listAddAtEnd(value) {
   const id = listNextId();
   rgaInsertNode(listState, { element_id: id, previous_id: previousId, value, deleted: false });
   listRender();
-  listSendState();
 }
 
 function listDelete(elementId) {
@@ -189,7 +187,6 @@ function listDelete(elementId) {
   if (!node || node.deleted) return;
   node.deleted = true;
   listRender();
-  listSendState();
 }
 
 listAddBtn.addEventListener("click", () => {
@@ -273,6 +270,11 @@ textArea.addEventListener("input", () => {
   const newStr = textArea.value;
   const { value: rendered, ids } = textRenderFlat();
   textApplyEdit(rendered, newStr, ids);
+});
+
+syncBtn.addEventListener("click", () => {
+  counterSend();
+  listSendState();
   textSendState();
 });
 

@@ -40,11 +40,11 @@ private:
 public:
     explicit text_RGA(std::string client_id);
 
-    text_change insert_at_beginning(char value);
+    text_change insert_at_beginning(std::string value);
 
     text_change insert_after(
         const std::string& previous_id,
-        char value
+        std::string value
     );
 
     text_change erase(const std::string& element_id);

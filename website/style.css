@@ -80,4 +80,17 @@ ul#list-items li button {
   color: #666;
   font-size: 0.85rem;
   text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+#sync-bar {
+  text-align: center;
+  margin-top: 1rem;
+}
+
+#sync-note {
+  color: #666;
+  font-size: 0.85rem;
+  text-align: center;
+  margin-top: 1rem;
 }

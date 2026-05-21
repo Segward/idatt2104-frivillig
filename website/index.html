@@ -6,6 +6,8 @@
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <div id="status">connecting…</div>
+
   <section>
     <h2>PN counter</h2>
     <h1 id="counter-val">0</h1>
@@ -29,7 +31,10 @@
     <textarea id="text-area" placeholder="collaborative text…"></textarea>
   </section>
 
-  <div id="status">connecting…</div>
+  <div id="sync-bar">
+    <button id="sync-btn">sync</button>
+    <div id="sync-note">merges your local changes into the master state</div>
+  </div>
 
   <script src="app.js"></script>
 </body>
