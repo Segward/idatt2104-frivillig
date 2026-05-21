@@ -1,6 +1,4 @@
-const WS_URL = (location.protocol === "file:")
-  ? "ws://127.0.0.1:12345"
-  : `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}`;
+const WS_URL = `wss://${location.host}`;
 
 const counterValEl = document.getElementById("counter-val");
 const incBtn = document.getElementById("inc");
@@ -110,6 +108,18 @@ function rgaStateNodes(state) {
     });
   }
   return out;
+}
+
+function advanceSequenceFromNodes(state, nodes, prefix) {
+  if (!clientId) return;
+  let maxSeq = state.sequence;
+  for (const node of nodes) {
+    const id = node.element_id;
+    if (typeof id !== "string" || !id.startsWith(prefix)) continue;
+    const seq = parseInt(id.slice(prefix.length), 10);
+    if (Number.isFinite(seq) && seq > maxSeq) maxSeq = seq;
+  }
+  state.sequence = maxSeq;
 }
 
 function rgaWalk(state, visit) {
@@ -292,11 +302,13 @@ function connect() {
     }
     if (msg.type === "list_state") {
       rgaMerge(listState, msg.nodes || []);
+      advanceSequenceFromNodes(listState, msg.nodes || [], `${clientId}:`);
       listRender();
       return;
     }
     if (msg.type === "text_state") {
       rgaMerge(textState, msg.nodes || []);
+      advanceSequenceFromNodes(textState, msg.nodes || [], `${clientId}:t:`);
       textRender();
       return;
     }
