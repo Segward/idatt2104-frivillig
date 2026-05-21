@@ -280,10 +280,27 @@ syncBtn.addEventListener("click", () => {
 
 // --- transport ---
 
+const RECONNECT_MIN_MS = 1000;
+const RECONNECT_MAX_MS = 30000;
+let reconnectDelay = RECONNECT_MIN_MS;
+let reconnectTimer = null;
+
+function scheduleReconnect() {
+  if (reconnectTimer !== null) return;
+  const delay = reconnectDelay;
+  reconnectDelay = Math.min(reconnectDelay * 2, RECONNECT_MAX_MS);
+  statusEl.textContent = `disconnected, reconnecting in ${Math.round(delay / 1000)}s…`;
+  reconnectTimer = setTimeout(() => {
+    reconnectTimer = null;
+    connect();
+  }, delay);
+}
+
 function connect() {
   ws = new WebSocket(WS_URL);
 
   ws.addEventListener("open", () => {
+    reconnectDelay = RECONNECT_MIN_MS;
     statusEl.textContent = "connected, waiting for auth…";
   });
 
@@ -318,6 +335,7 @@ function connect() {
 
   ws.addEventListener("close", () => {
     statusEl.textContent = "disconnected";
+    scheduleReconnect();
   });
 
   ws.addEventListener("error", () => {

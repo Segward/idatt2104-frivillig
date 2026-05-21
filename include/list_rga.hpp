@@ -20,7 +20,15 @@ private:
 
     std::unordered_set<std::string> applied_operations;
 
+    std::vector<list_change> pending_changes;
+
     std::string next_id();
+
+    bool pending_contains(const std::string& operation_id) const;
+
+    bool try_apply_change(const list_change& change);
+
+    void retry_pending_changes();
 
     void render_from(
         const std::string& previous_id,

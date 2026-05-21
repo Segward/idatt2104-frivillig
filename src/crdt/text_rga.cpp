@@ -263,20 +263,33 @@ void text_RGA::render_from(
     const std::string& previous_id,
     std::string& output
 ) const {
-    auto iterator = children.find(previous_id);
+    // Iterative pre-order walk; the recursive form overflowed the worker-thread
+    // stack on docs of a few thousand characters.
+    auto root = children.find(previous_id);
+    if (root == children.end()) return;
 
-    if (iterator == children.end()) {
-        return;
-    }
+    struct frame {
+        const std::vector<std::string>* siblings;
+        std::size_t index;
+    };
+    std::vector<frame> stack;
+    stack.push_back({&root->second, 0});
 
-    for (const std::string& child_id : iterator->second) {
+    while (!stack.empty()) {
+        frame& top = stack.back();
+        if (top.index >= top.siblings->size()) {
+            stack.pop_back();
+            continue;
+        }
+        const std::string& child_id = (*top.siblings)[top.index++];
         const text_character& child = nodes.at(child_id);
-
         if (!child.deleted) {
             output.append(child.value);
         }
-
-        render_from(child_id, output);
+        auto kids = children.find(child_id);
+        if (kids != children.end() && !kids->second.empty()) {
+            stack.push_back({&kids->second, 0});
+        }
     }
 }
 
