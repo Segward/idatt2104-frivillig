@@ -7,8 +7,6 @@
 #include <uwebsockets/App.h>
 
 namespace {
-  constexpr const char* kBroadcastTopic = "broadcast";
-
   struct PerSocketData {
     std::string id;
     std::uint64_t id_number{0};
@@ -103,7 +101,6 @@ void Server::run_loop() {
       data->id_number = ++next_id_number;
       data->id = "client-" + std::to_string(data->id_number);
       conns.insert(ws);
-      ws->subscribe(kBroadcastTopic);
       ws->send(Handler::encode_auth(data->id), uWS::OpCode::TEXT);
       ws->send(Handler::encode_counter(_master_counter.state()), uWS::OpCode::TEXT);
       ws->send(Handler::encode_list_state(_master_list.state()), uWS::OpCode::TEXT);
@@ -116,9 +113,7 @@ void Server::run_loop() {
 
       if (auto incoming = Handler::decode_counter(payload)) {
         _master_counter.merge(*incoming);
-        const auto state_msg = Handler::encode_counter(_master_counter.state());
-        ws->publish(kBroadcastTopic, state_msg, uWS::OpCode::TEXT);
-        ws->send(state_msg, uWS::OpCode::TEXT);
+        ws->send(Handler::encode_counter(_master_counter.state()), uWS::OpCode::TEXT);
         printf("[server] counter merged from %s; value=%lld\n",
                data->id.c_str(), static_cast<long long>(_master_counter.value()));
         return;
@@ -126,9 +121,7 @@ void Server::run_loop() {
 
       if (auto incoming = Handler::decode_list_state(payload)) {
         _master_list.merge(*incoming);
-        const auto state_msg = Handler::encode_list_state(_master_list.state());
-        ws->publish(kBroadcastTopic, state_msg, uWS::OpCode::TEXT);
-        ws->send(state_msg, uWS::OpCode::TEXT);
+        ws->send(Handler::encode_list_state(_master_list.state()), uWS::OpCode::TEXT);
         printf("[server] list merged from %s; size=%zu\n",
                data->id.c_str(), _master_list.value().size());
         return;
@@ -136,9 +129,7 @@ void Server::run_loop() {
 
       if (auto incoming = Handler::decode_text_state(payload)) {
         _master_text.merge(*incoming);
-        const auto state_msg = Handler::encode_text_state(_master_text.state());
-        ws->publish(kBroadcastTopic, state_msg, uWS::OpCode::TEXT);
-        ws->send(state_msg, uWS::OpCode::TEXT);
+        ws->send(Handler::encode_text_state(_master_text.state()), uWS::OpCode::TEXT);
         printf("[server] text merged from %s; len=%zu\n",
                data->id.c_str(), _master_text.value().size());
         return;

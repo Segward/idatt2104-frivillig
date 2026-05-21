@@ -139,15 +139,15 @@ TEST(handler_text_state_test, round_trip_empty) {
 
 TEST(handler_text_state_test, round_trip_nodes) {
   text_RGA_state state;
-  state.nodes.push_back({"A:t:1", "", 'H', false});
-  state.nodes.push_back({"A:t:2", "A:t:1", 'i', true});
+  state.nodes.push_back({"A:t:1", "", "H", false});
+  state.nodes.push_back({"A:t:2", "A:t:1", "i", true});
 
   auto text = Handler::encode_text_state(state);
   auto out = Handler::decode_text_state(text);
   ASSERT_TRUE(out.has_value());
   ASSERT_EQ(out->nodes.size(), 2u);
   EXPECT_EQ(out->nodes[0].id, "A:t:1");
-  EXPECT_EQ(out->nodes[0].value, 'H');
+  EXPECT_EQ(out->nodes[0].value, "H");
   EXPECT_FALSE(out->nodes[0].deleted);
   EXPECT_EQ(out->nodes[1].id, "A:t:2");
   EXPECT_EQ(out->nodes[1].previous_id, "A:t:1");

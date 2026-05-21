@@ -116,7 +116,7 @@ namespace {
     return {
       {"element_id", c.id},
       {"previous_id", c.previous_id},
-      {"value", std::string(1, c.value)},
+      {"value", c.value},
       {"deleted", c.deleted},
     };
   }
@@ -134,8 +134,7 @@ namespace {
     text_character out;
     out.id = eid_it->get<std::string>();
     out.previous_id = pid_it->get<std::string>();
-    const std::string v = val_it->get<std::string>();
-    out.value = v.empty() ? '\0' : v[0];
+    out.value = val_it->get<std::string>();
     out.deleted = del_it->get<bool>();
     if (out.id.empty()) return std::nullopt;
     return out;
