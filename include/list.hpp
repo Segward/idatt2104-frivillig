@@ -4,13 +4,13 @@
 #include <string>
 #include <vector>
 
-enum class list_operation_type {
-    Insert,
-    Delete
+enum class ListOperationType {
+    insert_op,
+    delete_op
 };
 
-struct list_change {
-    list_operation_type type;
+struct ListChange {
+    ListOperationType type;
 
     std::string operation_id;
 
@@ -21,15 +21,15 @@ struct list_change {
     std::string value;
 };
 
-struct list_item {
+struct ListItem {
     std::string id;
     std::string previous_id;
     std::string value;
     bool deleted = false;
 };
 
-struct list_RGA_state {
-    std::vector<list_item> nodes;
+struct ListRGAState {
+    std::vector<ListItem> nodes;
 };
 
 #endif

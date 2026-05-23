@@ -27,9 +27,9 @@ class Server {
 
     std::string _host;
     unsigned _port;
-    counter_pn _master_counter;
-    list_RGA _master_list;
-    text_RGA _master_text;
+    CounterPN _master_counter;
+    ListRGA _master_list;
+    TextRGA _master_text;
     std::thread _io_thread;
     std::atomic<bool> _running{false};
     std::atomic<uWS::Loop*> _loop{nullptr};

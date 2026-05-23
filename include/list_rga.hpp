@@ -15,25 +15,25 @@
 #include <list.hpp>
 
 // RGA-style list CRDT for ordered text items.
-class list_RGA {
+class ListRGA {
 private:
     // Unique identifier for this replica/client.
-    std::string client_id;
+    std::string _client_id;
 
     // Local counter used to generate unique operation and element IDs.
-    std::uint64_t local_sequence = 0;
+    std::uint64_t _local_sequence = 0;
 
     // Stores all list items by their unique element ID.
-    std::unordered_map<std::string, list_item> nodes;
+    std::unordered_map<std::string, ListItem> _nodes;
 
     // Stores ordering: previous_id -> items inserted after previous_id.
-    std::unordered_map<std::string, std::vector<std::string>> children;
+    std::unordered_map<std::string, std::vector<std::string>> _children;
 
     // Tracks applied operations to prevent duplicate application.
-    std::unordered_set<std::string> applied_operations;
+    std::unordered_set<std::string> _applied_operations;
 
     // Buffers operations whose causal dependencies haven't arrived yet.
-    std::vector<list_change> pending_changes;
+    std::vector<ListChange> _pending_changes;
 
     // Generates a unique ID for local operations and elements.
     std::string next_id();
@@ -42,7 +42,7 @@ private:
     bool pending_contains(const std::string& operation_id) const;
 
     // Attempts to apply a change; returns false if dependencies are missing.
-    bool try_apply_change(const list_change& change);
+    bool try_apply_change(const ListChange& change);
 
     // Re-attempts buffered pending changes after new state arrives.
     void retry_pending_changes();
@@ -55,28 +55,28 @@ private:
 
 public:
     // Creates a list CRDT for a specific client/replica.
-    explicit list_RGA(std::string client_id);
+    explicit ListRGA(std::string client_id);
 
     // Inserts a new item at the beginning of the list.
-    list_change insert_at_beginning(const std::string& value);
+    ListChange insert_at_beginning(const std::string& value);
 
     // Inserts a new item after an existing item ID.
-    list_change insert_after(
+    ListChange insert_after(
         const std::string& previous_id,
         const std::string& value
     );
 
     // Marks an item as deleted without physically removing it.
-    list_change erase(const std::string& element_id);
+    ListChange erase(const std::string& element_id);
 
     // Applies a local or remote list operation.
-    void apply(const list_change& change);
+    void apply(const ListChange& change);
 
     // Returns a serializable snapshot of the current list state.
-    list_RGA_state state() const;
+    ListRGAState state() const;
 
     // Merges incoming list state into this replica.
-    void merge(const list_RGA_state& other);
+    void merge(const ListRGAState& other);
 
     // Returns the visible, non-deleted list items.
     std::vector<std::string> value() const;

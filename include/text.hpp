@@ -4,13 +4,13 @@
 #include <string>
 #include <vector>
 
-enum class text_operation_type {
-    Insert,
-    Delete
+enum class TextOperationType {
+    insert_op,
+    delete_op
 };
 
-struct text_change {
-    text_operation_type type;
+struct TextChange {
+    TextOperationType type;
 
     // Unique ID for this operation.
     std::string operation_id;
@@ -29,15 +29,15 @@ struct text_change {
     std::string value;
 };
 
-struct text_character {
+struct TextCharacter {
     std::string id;
     std::string previous_id;
     std::string value;
     bool deleted = false;
 };
 
-struct text_RGA_state {
-    std::vector<text_character> nodes;
+struct TextRGAState {
+    std::vector<TextCharacter> nodes;
 };
 
 #endif

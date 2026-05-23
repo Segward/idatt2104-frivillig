@@ -1,38 +1,38 @@
 #include <list_rga.hpp>
 
 // Initializes a list CRDT for this client
-list_RGA::list_RGA(std::string client_id)
-    : client_id(std::move(client_id)) {
-    if (this->client_id.empty()) {
+ListRGA::ListRGA(std::string client_id)
+    : _client_id(std::move(client_id)) {
+    if (_client_id.empty()) {
         throw std::invalid_argument("Client ID cannot be empty");
     }
 
     // Empty string represents beginning of the list.
-    children[""] = {};
+    _children[""] = {};
 }
 
 // Generates a unique ID for local operations and elements
-std::string list_RGA::next_id() {
-    local_sequence++;
+std::string ListRGA::next_id() {
+    _local_sequence++;
 
     std::ostringstream stream;
 
-    stream << client_id
+    stream << _client_id
            << ":"
            << std::setw(20)
            << std::setfill('0')
-           << local_sequence;
+           << _local_sequence;
 
     return stream.str();
 }
 
 // Inserts an item at the beginning of the list
-list_change list_RGA::insert_at_beginning(const std::string& value) {
+ListChange ListRGA::insert_at_beginning(const std::string& value) {
     return insert_after("", value);
 }
 
 // Inserts an item after a given list item ID
-list_change list_RGA::insert_after(
+ListChange ListRGA::insert_after(
     const std::string& previous_id,
     const std::string& value
 ) {
@@ -40,14 +40,14 @@ list_change list_RGA::insert_after(
         throw std::invalid_argument("List item value cannot be empty");
     }
 
-    if (!previous_id.empty() && nodes.find(previous_id) == nodes.end()) {
+    if (!previous_id.empty() && _nodes.find(previous_id) == _nodes.end()) {
         throw std::invalid_argument("Cannot insert after unknown element");
     }
 
     std::string new_element_id = next_id();
 
-    list_change change;
-    change.type = list_operation_type::Insert;
+    ListChange change;
+    change.type = ListOperationType::insert_op;
     change.operation_id = new_element_id;
     change.element_id = new_element_id;
     change.previous_id = previous_id;
@@ -59,15 +59,15 @@ list_change list_RGA::insert_after(
 }
 
 // Creates and applies a delete operation for a list item
-list_change list_RGA::erase(const std::string& element_id) {
-    if (nodes.find(element_id) == nodes.end()) {
+ListChange ListRGA::erase(const std::string& element_id) {
+    if (_nodes.find(element_id) == _nodes.end()) {
         throw std::invalid_argument("Cannot erase unknown element");
     }
 
     std::string operation_id = next_id();
 
-    list_change change;
-    change.type = list_operation_type::Delete;
+    ListChange change;
+    change.type = ListOperationType::delete_op;
     change.operation_id = operation_id;
     change.element_id = element_id;
     change.previous_id = "";
@@ -79,19 +79,19 @@ list_change list_RGA::erase(const std::string& element_id) {
 }
 
 // Checks whether a change is already queued in the pending buffer
-bool list_RGA::pending_contains(const std::string& operation_id) const {
+bool ListRGA::pending_contains(const std::string& operation_id) const {
     return std::any_of(
-        pending_changes.begin(),
-        pending_changes.end(),
-        [&operation_id](const list_change& change) {
+        _pending_changes.begin(),
+        _pending_changes.end(),
+        [&operation_id](const ListChange& change) {
             return change.operation_id == operation_id;
         }
     );
 }
 
 // Attempts to apply a single change; returns false if dependencies are missing
-bool list_RGA::try_apply_change(const list_change& change) {
-    if (change.type == list_operation_type::Insert) {
+bool ListRGA::try_apply_change(const ListChange& change) {
+    if (change.type == ListOperationType::insert_op) {
         if (change.element_id.empty()) {
             throw std::invalid_argument("Insert operation requires an element ID");
         }
@@ -101,23 +101,23 @@ bool list_RGA::try_apply_change(const list_change& change) {
         }
 
         if (!change.previous_id.empty() &&
-            nodes.find(change.previous_id) == nodes.end()) {
+            _nodes.find(change.previous_id) == _nodes.end()) {
             return false;
         }
 
-        if (nodes.find(change.element_id) != nodes.end()) {
+        if (_nodes.find(change.element_id) != _nodes.end()) {
             return true;
         }
 
-        list_item item;
+        ListItem item;
         item.id = change.element_id;
         item.previous_id = change.previous_id;
         item.value = change.value;
         item.deleted = false;
 
-        nodes.emplace(change.element_id, item);
+        _nodes.emplace(change.element_id, item);
 
-        auto& sibling_list = children[change.previous_id];
+        auto& sibling_list = _children[change.previous_id];
 
         if (std::find(
                 sibling_list.begin(),
@@ -129,21 +129,21 @@ bool list_RGA::try_apply_change(const list_change& change) {
 
         std::sort(sibling_list.begin(), sibling_list.end());
 
-        children.try_emplace(change.element_id, std::vector<std::string>{});
+        _children.try_emplace(change.element_id, std::vector<std::string>{});
 
         return true;
     }
 
-    if (change.type == list_operation_type::Delete) {
+    if (change.type == ListOperationType::delete_op) {
         if (change.element_id.empty()) {
             throw std::invalid_argument("Delete operation requires an element ID");
         }
 
-        if (nodes.find(change.element_id) == nodes.end()) {
+        if (_nodes.find(change.element_id) == _nodes.end()) {
             return false;
         }
 
-        nodes.at(change.element_id).deleted = true;
+        _nodes.at(change.element_id).deleted = true;
         return true;
     }
 
@@ -151,26 +151,26 @@ bool list_RGA::try_apply_change(const list_change& change) {
 }
 
 // Re-attempts buffered pending changes until no further progress is possible
-void list_RGA::retry_pending_changes() {
+void ListRGA::retry_pending_changes() {
     bool made_progress = true;
 
     while (made_progress) {
         made_progress = false;
 
-        auto iterator = pending_changes.begin();
+        auto iterator = _pending_changes.begin();
 
-        while (iterator != pending_changes.end()) {
-            const list_change& change = *iterator;
+        while (iterator != _pending_changes.end()) {
+            const ListChange& change = *iterator;
 
-            if (applied_operations.find(change.operation_id) != applied_operations.end()) {
-                iterator = pending_changes.erase(iterator);
+            if (_applied_operations.find(change.operation_id) != _applied_operations.end()) {
+                iterator = _pending_changes.erase(iterator);
                 made_progress = true;
                 continue;
             }
 
             if (try_apply_change(change)) {
-                applied_operations.insert(change.operation_id);
-                iterator = pending_changes.erase(iterator);
+                _applied_operations.insert(change.operation_id);
+                iterator = _pending_changes.erase(iterator);
                 made_progress = true;
                 continue;
             }
@@ -181,40 +181,40 @@ void list_RGA::retry_pending_changes() {
 }
 
 // Applies a local or remote list operation, buffering it if dependencies are missing
-void list_RGA::apply(const list_change& change) {
+void ListRGA::apply(const ListChange& change) {
     if (change.operation_id.empty()) {
         throw std::invalid_argument("Operation ID cannot be empty");
     }
 
-    if (applied_operations.find(change.operation_id) != applied_operations.end()) {
+    if (_applied_operations.find(change.operation_id) != _applied_operations.end()) {
         return;
     }
 
     if (try_apply_change(change)) {
-        applied_operations.insert(change.operation_id);
+        _applied_operations.insert(change.operation_id);
         retry_pending_changes();
         return;
     }
 
     if (!pending_contains(change.operation_id)) {
-        pending_changes.push_back(change);
+        _pending_changes.push_back(change);
     }
 }
 
 // Creates a serializable snapshot of the list state
-list_RGA_state list_RGA::state() const {
-    list_RGA_state snapshot;
-    snapshot.nodes.reserve(nodes.size());
-    for (const auto& [_, item] : nodes) {
+ListRGAState ListRGA::state() const {
+    ListRGAState snapshot;
+    snapshot.nodes.reserve(_nodes.size());
+    for (const auto& [_, item] : _nodes) {
         snapshot.nodes.push_back(item);
     }
     return snapshot;
 }
 
 // Merges incoming list state into this replica
-void list_RGA::merge(const list_RGA_state& other) {
+void ListRGA::merge(const ListRGAState& other) {
     // Multi-pass: a node can only be inserted once its previous_id is present.
-    std::vector<list_item> pending(other.nodes.begin(), other.nodes.end());
+    std::vector<ListItem> pending(other.nodes.begin(), other.nodes.end());
 
     bool made_progress = true;
     while (made_progress) {
@@ -222,10 +222,10 @@ void list_RGA::merge(const list_RGA_state& other) {
 
         auto iterator = pending.begin();
         while (iterator != pending.end()) {
-            const list_item& incoming = *iterator;
+            const ListItem& incoming = *iterator;
 
-            auto existing = nodes.find(incoming.id);
-            if (existing != nodes.end()) {
+            auto existing = _nodes.find(incoming.id);
+            if (existing != _nodes.end()) {
                 // Tombstone join: deleted is a monotonic OR.
                 existing->second.deleted = existing->second.deleted || incoming.deleted;
                 iterator = pending.erase(iterator);
@@ -234,24 +234,24 @@ void list_RGA::merge(const list_RGA_state& other) {
             }
 
             if (!incoming.previous_id.empty() &&
-                nodes.find(incoming.previous_id) == nodes.end()) {
+                _nodes.find(incoming.previous_id) == _nodes.end()) {
                 ++iterator;
                 continue;
             }
 
-            list_item item = incoming;
-            nodes.emplace(item.id, item);
+            ListItem item = incoming;
+            _nodes.emplace(item.id, item);
 
-            auto& sibling_list = children[item.previous_id];
+            auto& sibling_list = _children[item.previous_id];
             if (std::find(sibling_list.begin(), sibling_list.end(), item.id)
                 == sibling_list.end()) {
                 sibling_list.push_back(item.id);
             }
             std::sort(sibling_list.begin(), sibling_list.end());
 
-            children.try_emplace(item.id, std::vector<std::string>{});
+            _children.try_emplace(item.id, std::vector<std::string>{});
 
-            applied_operations.insert(item.id);
+            _applied_operations.insert(item.id);
 
             iterator = pending.erase(iterator);
             made_progress = true;
@@ -260,13 +260,13 @@ void list_RGA::merge(const list_RGA_state& other) {
 }
 
 // Builds the visible list recursively from a given item
-void list_RGA::render_from(
+void ListRGA::render_from(
     const std::string& previous_id,
     std::vector<std::string>& output
 ) const {
-    // Iterative pre-order walk; see text_RGA::render_from.
-    auto root = children.find(previous_id);
-    if (root == children.end()) return;
+    // Iterative pre-order walk; see TextRGA::render_from.
+    auto root = _children.find(previous_id);
+    if (root == _children.end()) return;
 
     struct frame {
         const std::vector<std::string>* siblings;
@@ -282,19 +282,19 @@ void list_RGA::render_from(
             continue;
         }
         const std::string& child_id = (*top.siblings)[top.index++];
-        const list_item& child = nodes.at(child_id);
+        const ListItem& child = _nodes.at(child_id);
         if (!child.deleted) {
             output.push_back(child.value);
         }
-        auto kids = children.find(child_id);
-        if (kids != children.end() && !kids->second.empty()) {
+        auto kids = _children.find(child_id);
+        if (kids != _children.end() && !kids->second.empty()) {
             stack.push_back({&kids->second, 0});
         }
     }
 }
 
 // Returns the visible list items
-std::vector<std::string> list_RGA::value() const {
+std::vector<std::string> ListRGA::value() const {
     std::vector<std::string> output;
 
     render_from("", output);
@@ -303,7 +303,7 @@ std::vector<std::string> list_RGA::value() const {
 }
 
 // Formats the visible list as a printable string
-std::string list_RGA::to_string() const {
+std::string ListRGA::to_string() const {
     std::vector<std::string> items = value();
 
     std::ostringstream stream;
@@ -316,6 +316,6 @@ std::string list_RGA::to_string() const {
 }
 
 // Checks whether an operation has already been applied
-bool list_RGA::has_applied(const std::string& operation_id) const {
-    return applied_operations.find(operation_id) != applied_operations.end();
+bool ListRGA::has_applied(const std::string& operation_id) const {
+    return _applied_operations.find(operation_id) != _applied_operations.end();
 }
