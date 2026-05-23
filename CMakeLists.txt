@@ -26,7 +26,8 @@ add_library(crdt STATIC
   src/crdt/counter_pn.cpp
   src/crdt/list_rga.cpp
   src/crdt/text_rga.cpp
-  src/handler.cpp
+  src/server/handler.cpp
+  src/server/messages.cpp
 )
 target_include_directories(crdt PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(crdt PUBLIC
@@ -39,7 +40,9 @@ target_precompile_headers(crdt PUBLIC
 
 add_executable(server
   src/main.cpp
-  src/server.cpp
+  src/server/server.cpp
+  src/server/assets.cpp
+  src/util/io.cpp
 )
 set_target_properties(server PROPERTIES
   RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/release"

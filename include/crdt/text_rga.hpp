@@ -12,23 +12,20 @@ class TextRGA {
 private:
     std::string _client_id;
     std::uint64_t _local_sequence = 0;
-
     std::unordered_map<std::string, TextCharacter> _nodes;
     std::unordered_map<std::string, std::vector<std::string>> _children;
     std::unordered_set<std::string> _applied_operations;
 
     // Changes whose previous_id hasn't been seen yet; retried after each
-    // successful apply.
+    // successful apply. The parallel set gives O(1) dedup on rebuffer.
     std::vector<TextChange> _pending_changes;
-
+    std::unordered_set<std::string> _pending_operations;
     std::string next_id();
     bool node_exists(const std::string& node_id) const;
-    bool pending_contains(const std::string& operation_id) const;
 
     // Returns false (without throwing) if the change's causal predecessor
     // hasn't been seen yet, so the caller can buffer it.
     bool try_apply_change(const TextChange& change);
-
     void retry_pending_changes();
     void render_from(
         const std::string& previous_id,
@@ -37,7 +34,14 @@ private:
 
 public:
     explicit TextRGA(std::string client_id);
+    ~TextRGA() = default;
 
+    // A replica's identity is its client ID; copying or moving the RGA would
+    // silently fork or relocate that identity and break convergence.
+    TextRGA(const TextRGA&) = delete;
+    TextRGA& operator=(const TextRGA&) = delete;
+    TextRGA(TextRGA&&) = delete;
+    TextRGA& operator=(TextRGA&&) = delete;
     TextChange insert_at_beginning(std::string value);
     TextChange insert_after(
         const std::string& previous_id,
@@ -51,13 +55,11 @@ public:
     // Applies a local or remote change. Already-seen or unreplayable ops are
     // deduped or buffered; nothing fails noisily.
     void apply(const TextChange& change);
-
     TextRGAState state() const;
 
     // Tombstones win on either side, so deletes are never resurrected by an
     // older incoming state.
     void merge(const TextRGAState& other);
-
     std::string value() const;
     bool has_applied(const std::string& operation_id) const;
 };
