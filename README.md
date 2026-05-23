@@ -71,13 +71,13 @@ The build also compiles the GoogleTest suite. After building:
 
 ```sh
 ./scripts/build.sh
-cd build && ctest --output-on-failure
+ctest --preset default
 ```
 
 Or run the binary directly to filter by name:
 
 ```sh
-./build/tests/tests --gtest_filter='TextRGA*'
+./build/tests/tests --gtest_filter='text_rga_test.*'
 ```
 
 ## Future improvements
