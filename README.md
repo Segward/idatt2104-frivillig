@@ -37,7 +37,7 @@ git clone --recurse-submodules https://github.com/Segward/idatt2104-frivillig.gi
 cd idatt2104-frivillig
 ```
 
-## Setup
+## Building the application
 Generate a self-signed placeholder cert into `./certs/`:
 
 ```sh
@@ -54,12 +54,23 @@ sudo ./scripts/cert.sh [your domain]
 > Point the domain at this machine, forward port 80 to 80 (for cert
 > issuance), and 443 to 12345 (the port the server listens on).
 
-## Build and run
-> [!IMPORTANT]
-> Complete the [Setup](#setup) first since the server won't start without certs.
+Then build:
 
 ```sh
 ./scripts/build.sh
+```
+> [!NOTE]
+> The build copies the cert into the release folder. To pick up a new
+> cert, either rerun `cert.sh` and rebuild from a clean `build/`, or
+> drop the new files into `build/release/certs`.
+
+## Run the application
+> [!IMPORTANT]
+> Complete [Building the application](#building-the-application) first.
+
+Run the server binary produced by the build:
+
+```sh
 ./build/release/server
 ```
 
@@ -67,17 +78,19 @@ Then open `https://localhost:12345` in your browser.
 With a deployment open `https://[your domain]` instead.
 
 ## Run the tests
-The build also compiles the GoogleTest suite. After building:
+> [!IMPORTANT]
+> Complete [Building the application](#building-the-application) first.
+
+The build also produces the GoogleTest suite. Run it with:
 
 ```sh
-./scripts/build.sh
-cd build && ctest --output-on-failure
+ctest --preset default
 ```
 
-Or run the binary directly to filter by name:
+Or invoke the binary directly to filter by name:
 
 ```sh
-./build/tests/tests --gtest_filter='TextRGA*'
+./build/tests/tests --gtest_filter='text_rga_test.*'
 ```
 
 ## Future improvements
