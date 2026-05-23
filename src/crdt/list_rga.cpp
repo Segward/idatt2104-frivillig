@@ -1,11 +1,6 @@
 #include <list_rga.hpp>
 
-#include <algorithm>
-#include <iomanip>
-#include <sstream>
-#include <stdexcept>
-#include <utility>
-
+// Initializes a list CRDT for this client
 list_RGA::list_RGA(std::string client_id)
     : client_id(std::move(client_id)) {
     if (this->client_id.empty()) {
@@ -16,6 +11,7 @@ list_RGA::list_RGA(std::string client_id)
     children[""] = {};
 }
 
+// Generates a unique ID for local operations and elements
 std::string list_RGA::next_id() {
     local_sequence++;
 
@@ -30,10 +26,12 @@ std::string list_RGA::next_id() {
     return stream.str();
 }
 
+// Inserts an item at the beginning of the list
 list_change list_RGA::insert_at_beginning(const std::string& value) {
     return insert_after("", value);
 }
 
+// Inserts an item after a given list item ID
 list_change list_RGA::insert_after(
     const std::string& previous_id,
     const std::string& value
@@ -60,6 +58,7 @@ list_change list_RGA::insert_after(
     return change;
 }
 
+// Creates and applies a delete operation for a list item
 list_change list_RGA::erase(const std::string& element_id) {
     if (nodes.find(element_id) == nodes.end()) {
         throw std::invalid_argument("Cannot erase unknown element");
@@ -79,6 +78,7 @@ list_change list_RGA::erase(const std::string& element_id) {
     return change;
 }
 
+// Applies a local or remote list operation
 void list_RGA::apply(const list_change& change) {
     if (change.operation_id.empty()) {
         throw std::invalid_argument("Operation ID cannot be empty");
@@ -148,6 +148,7 @@ void list_RGA::apply(const list_change& change) {
     applied_operations.insert(change.operation_id);
 }
 
+// Creates a serializable snapshot of the list state
 list_RGA_state list_RGA::state() const {
     list_RGA_state snapshot;
     snapshot.nodes.reserve(nodes.size());
@@ -157,6 +158,7 @@ list_RGA_state list_RGA::state() const {
     return snapshot;
 }
 
+// Merges incoming list state into this replica
 void list_RGA::merge(const list_RGA_state& other) {
     // Multi-pass: a node can only be inserted once its previous_id is present.
     std::vector<list_item> pending(other.nodes.begin(), other.nodes.end());
@@ -204,6 +206,7 @@ void list_RGA::merge(const list_RGA_state& other) {
     }
 }
 
+// Builds the visible list recursively from a given item
 void list_RGA::render_from(
     const std::string& previous_id,
     std::vector<std::string>& output
@@ -225,6 +228,7 @@ void list_RGA::render_from(
     }
 }
 
+// Returns the visible list items
 std::vector<std::string> list_RGA::value() const {
     std::vector<std::string> output;
 
@@ -233,6 +237,7 @@ std::vector<std::string> list_RGA::value() const {
     return output;
 }
 
+// Formats the visible list as a printable string
 std::string list_RGA::to_string() const {
     std::vector<std::string> items = value();
 
@@ -245,6 +250,7 @@ std::string list_RGA::to_string() const {
     return stream.str();
 }
 
+// Checks whether an operation has already been applied
 bool list_RGA::has_applied(const std::string& operation_id) const {
     return applied_operations.find(operation_id) != applied_operations.end();
 }
