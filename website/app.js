@@ -1,6 +1,4 @@
-const WS_URL = (location.protocol === "file:")
-  ? "ws://127.0.0.1:12345"
-  : `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}`;
+const WS_URL = `wss://${location.host}`;
 
 const counterValEl = document.getElementById("counter-val");
 const incBtn = document.getElementById("inc");
@@ -10,6 +8,7 @@ const listInput = document.getElementById("list-input");
 const listAddBtn = document.getElementById("list-add-btn");
 const textArea = document.getElementById("text-area");
 const statusEl = document.getElementById("status");
+const syncBtn = document.getElementById("sync-btn");
 
 let clientId = null;
 let ws = null;
@@ -48,14 +47,12 @@ function counterBumpInc() {
   if (!clientId) return;
   counterState.increments[clientId] = (counterState.increments[clientId] || 0) + 1;
   counterRecompute();
-  counterSend();
 }
 
 function counterBumpDec() {
   if (!clientId) return;
   counterState.decrements[clientId] = (counterState.decrements[clientId] || 0) + 1;
   counterRecompute();
-  counterSend();
 }
 
 incBtn.addEventListener("click", counterBumpInc);
@@ -110,6 +107,18 @@ function rgaStateNodes(state) {
     });
   }
   return out;
+}
+
+function advanceSequenceFromNodes(state, nodes, prefix) {
+  if (!clientId) return;
+  let maxSeq = state.sequence;
+  for (const node of nodes) {
+    const id = node.element_id;
+    if (typeof id !== "string" || !id.startsWith(prefix)) continue;
+    const seq = parseInt(id.slice(prefix.length), 10);
+    if (Number.isFinite(seq) && seq > maxSeq) maxSeq = seq;
+  }
+  state.sequence = maxSeq;
 }
 
 function rgaWalk(state, visit) {
@@ -170,7 +179,6 @@ function listAddAtEnd(value) {
   const id = listNextId();
   rgaInsertNode(listState, { element_id: id, previous_id: previousId, value, deleted: false });
   listRender();
-  listSendState();
 }
 
 function listDelete(elementId) {
@@ -179,7 +187,6 @@ function listDelete(elementId) {
   if (!node || node.deleted) return;
   node.deleted = true;
   listRender();
-  listSendState();
 }
 
 listAddBtn.addEventListener("click", () => {
@@ -263,15 +270,37 @@ textArea.addEventListener("input", () => {
   const newStr = textArea.value;
   const { value: rendered, ids } = textRenderFlat();
   textApplyEdit(rendered, newStr, ids);
+});
+
+syncBtn.addEventListener("click", () => {
+  counterSend();
+  listSendState();
   textSendState();
 });
 
 // --- transport ---
 
+const RECONNECT_MIN_MS = 1000;
+const RECONNECT_MAX_MS = 30000;
+let reconnectDelay = RECONNECT_MIN_MS;
+let reconnectTimer = null;
+
+function scheduleReconnect() {
+  if (reconnectTimer !== null) return;
+  const delay = reconnectDelay;
+  reconnectDelay = Math.min(reconnectDelay * 2, RECONNECT_MAX_MS);
+  statusEl.textContent = `disconnected, reconnecting in ${Math.round(delay / 1000)}s…`;
+  reconnectTimer = setTimeout(() => {
+    reconnectTimer = null;
+    connect();
+  }, delay);
+}
+
 function connect() {
   ws = new WebSocket(WS_URL);
 
   ws.addEventListener("open", () => {
+    reconnectDelay = RECONNECT_MIN_MS;
     statusEl.textContent = "connected, waiting for auth…";
   });
 
@@ -292,11 +321,13 @@ function connect() {
     }
     if (msg.type === "list_state") {
       rgaMerge(listState, msg.nodes || []);
+      advanceSequenceFromNodes(listState, msg.nodes || [], `${clientId}:`);
       listRender();
       return;
     }
     if (msg.type === "text_state") {
       rgaMerge(textState, msg.nodes || []);
+      advanceSequenceFromNodes(textState, msg.nodes || [], `${clientId}:t:`);
       textRender();
       return;
     }
@@ -304,6 +335,7 @@ function connect() {
 
   ws.addEventListener("close", () => {
     statusEl.textContent = "disconnected";
+    scheduleReconnect();
   });
 
   ws.addEventListener("error", () => {

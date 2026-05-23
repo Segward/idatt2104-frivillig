@@ -32,8 +32,20 @@ private:
     // Tracks applied operations to prevent duplicate application.
     std::unordered_set<std::string> applied_operations;
 
+    // Buffers operations whose causal dependencies haven't arrived yet.
+    std::vector<list_change> pending_changes;
+
     // Generates a unique ID for local operations and elements.
     std::string next_id();
+
+    // Checks if an operation is already buffered as pending.
+    bool pending_contains(const std::string& operation_id) const;
+
+    // Attempts to apply a change; returns false if dependencies are missing.
+    bool try_apply_change(const list_change& change);
+
+    // Re-attempts buffered pending changes after new state arrives.
+    void retry_pending_changes();
 
     // Recursively builds the visible list from a given previous element.
     void render_from(

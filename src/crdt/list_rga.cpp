@@ -78,16 +78,19 @@ list_change list_RGA::erase(const std::string& element_id) {
     return change;
 }
 
-// Applies a local or remote list operation
-void list_RGA::apply(const list_change& change) {
-    if (change.operation_id.empty()) {
-        throw std::invalid_argument("Operation ID cannot be empty");
-    }
+// Checks whether a change is already queued in the pending buffer
+bool list_RGA::pending_contains(const std::string& operation_id) const {
+    return std::any_of(
+        pending_changes.begin(),
+        pending_changes.end(),
+        [&operation_id](const list_change& change) {
+            return change.operation_id == operation_id;
+        }
+    );
+}
 
-    if (applied_operations.find(change.operation_id) != applied_operations.end()) {
-        return;
-    }
-
+// Attempts to apply a single change; returns false if dependencies are missing
+bool list_RGA::try_apply_change(const list_change& change) {
     if (change.type == list_operation_type::Insert) {
         if (change.element_id.empty()) {
             throw std::invalid_argument("Insert operation requires an element ID");
@@ -99,53 +102,103 @@ void list_RGA::apply(const list_change& change) {
 
         if (!change.previous_id.empty() &&
             nodes.find(change.previous_id) == nodes.end()) {
-            throw std::runtime_error(
-                "Cannot apply insert because previous element is missing"
-            );
+            return false;
         }
 
-        if (nodes.find(change.element_id) == nodes.end()) {
-            list_item item;
-            item.id = change.element_id;
-            item.previous_id = change.previous_id;
-            item.value = change.value;
-            item.deleted = false;
-
-            nodes.emplace(change.element_id, item);
-
-            auto& sibling_list = children[change.previous_id];
-
-            if (std::find(
-                    sibling_list.begin(),
-                    sibling_list.end(),
-                    change.element_id
-                ) == sibling_list.end()) {
-                sibling_list.push_back(change.element_id);
-            }
-
-            std::sort(sibling_list.begin(), sibling_list.end());
-
-            children[change.element_id] = {};
+        if (nodes.find(change.element_id) != nodes.end()) {
+            return true;
         }
+
+        list_item item;
+        item.id = change.element_id;
+        item.previous_id = change.previous_id;
+        item.value = change.value;
+        item.deleted = false;
+
+        nodes.emplace(change.element_id, item);
+
+        auto& sibling_list = children[change.previous_id];
+
+        if (std::find(
+                sibling_list.begin(),
+                sibling_list.end(),
+                change.element_id
+            ) == sibling_list.end()) {
+            sibling_list.push_back(change.element_id);
+        }
+
+        std::sort(sibling_list.begin(), sibling_list.end());
+
+        children.try_emplace(change.element_id, std::vector<std::string>{});
+
+        return true;
     }
-    else if (change.type == list_operation_type::Delete) {
+
+    if (change.type == list_operation_type::Delete) {
         if (change.element_id.empty()) {
             throw std::invalid_argument("Delete operation requires an element ID");
         }
 
         if (nodes.find(change.element_id) == nodes.end()) {
-            throw std::runtime_error(
-                "Cannot apply delete because element is missing"
-            );
+            return false;
         }
 
         nodes.at(change.element_id).deleted = true;
-    }
-    else {
-        throw std::invalid_argument("Unknown list operation type");
+        return true;
     }
 
-    applied_operations.insert(change.operation_id);
+    throw std::invalid_argument("Unknown list operation type");
+}
+
+// Re-attempts buffered pending changes until no further progress is possible
+void list_RGA::retry_pending_changes() {
+    bool made_progress = true;
+
+    while (made_progress) {
+        made_progress = false;
+
+        auto iterator = pending_changes.begin();
+
+        while (iterator != pending_changes.end()) {
+            const list_change& change = *iterator;
+
+            if (applied_operations.find(change.operation_id) != applied_operations.end()) {
+                iterator = pending_changes.erase(iterator);
+                made_progress = true;
+                continue;
+            }
+
+            if (try_apply_change(change)) {
+                applied_operations.insert(change.operation_id);
+                iterator = pending_changes.erase(iterator);
+                made_progress = true;
+                continue;
+            }
+
+            ++iterator;
+        }
+    }
+}
+
+// Applies a local or remote list operation, buffering it if dependencies are missing
+void list_RGA::apply(const list_change& change) {
+    if (change.operation_id.empty()) {
+        throw std::invalid_argument("Operation ID cannot be empty");
+    }
+
+    if (applied_operations.find(change.operation_id) != applied_operations.end()) {
+        return;
+    }
+
+    if (try_apply_change(change)) {
+        applied_operations.insert(change.operation_id);
+        retry_pending_changes();
+        return;
+    }
+
+    if (!pending_contains(change.operation_id)) {
+        pending_changes.push_back(change);
+    }
 }
 
 // Creates a serializable snapshot of the list state
@@ -211,20 +264,32 @@ void list_RGA::render_from(
     const std::string& previous_id,
     std::vector<std::string>& output
 ) const {
-    auto iterator = children.find(previous_id);
+    // Iterative pre-order walk; see text_RGA::render_from.
+    auto root = children.find(previous_id);
+    if (root == children.end()) return;
 
-    if (iterator == children.end()) {
-        return;
-    }
+    struct frame {
+        const std::vector<std::string>* siblings;
+        std::size_t index;
+    };
+    std::vector<frame> stack;
+    stack.push_back({&root->second, 0});
 
-    for (const std::string& child_id : iterator->second) {
+    while (!stack.empty()) {
+        frame& top = stack.back();
+        if (top.index >= top.siblings->size()) {
+            stack.pop_back();
+            continue;
+        }
+        const std::string& child_id = (*top.siblings)[top.index++];
         const list_item& child = nodes.at(child_id);
-
         if (!child.deleted) {
             output.push_back(child.value);
         }
-
-        render_from(child_id, output);
+        auto kids = children.find(child_id);
+        if (kids != children.end() && !kids->second.empty()) {
+            stack.push_back({&kids->second, 0});
+        }
     }
 }
 

@@ -1,52 +1,56 @@
 # idatt2104-frivillig
 
+> [!NOTE]
+> On Windows, use the `.ps1` equivalents of the scripts below in PowerShell
+> (e.g. `./scripts/cert.ps1`, `./scripts/build.ps1`).
+
 ## Requirements
 - CMake 3.25+
 - A C++23 compiler
-- Git (with submodules)
+- OpenSSL
+- Git
+- vcpkg build tools: `make`, `pkg-config`, `curl`, `zip`, `unzip`, `tar`
 
 ## Install
-To install this project you need to clone this repository:
+> [!IMPORTANT]
+> Clone with `--recurse-submodules` — vcpkg is vendored as a submodule.
 
 ```sh
-git clone https://github.com/Segward/idatt2104-frivillig.git
+git clone --recurse-submodules https://github.com/Segward/idatt2104-frivillig.git
+cd idatt2104-frivillig
 ```
 
-This project uses [vcpkg](https://github.com/microsoft/vcpkg) as a git submodule.
-After cloning the project you need to initialize it:
+## Setup
+Generate a self-signed placeholder cert into `./certs/`:
 
 ```sh
-git submodule update --init --recursive
+./scripts/cert.sh
 ```
 
-## Build
-Configure and build using the provided CMake preset:
+For a real cert, pass a domain:
 
 ```sh
-cmake --preset default
-cmake --build --preset default
+sudo ./scripts/cert.sh [your domain]
 ```
 
-The server executable is written to `build/server`.
+> [!NOTE]
+> Point the domain at this machine, forward port 80 to 80 (for cert
+> issuance), and 443 to 12345 (the port the server listens on).
 
-## Run
-Start the server:
+## Build and run
+> [!IMPORTANT]
+> Complete the [Setup](#setup) first since the server won't start without certs.
 
 ```sh
-./build/server
+./scripts/build.sh
+./build/release/server
 ```
 
-Then open <http://127.0.0.1:12345/> in a browser. The server hosts the demo page
-and the WebSocket endpoint on the same port. Open the URL in multiple tabs to see
-the counter sync live.
+Then open `https://localhost:12345` in your browser. 
+With a deployment open `https://[your domain]` instead.
 
-## Unit tests
-
-```sh
-ctest --preset default
-```
-
-## Third party dependencies
-- GoogleTest; Google C++ testing and mocking framework.
-- uWebSockets; WebSocket server library.
-- nlohmann/json; JSON for Modern C++.
+## Third party
+- GoogleTest: C++ unit testing framework
+- uWebSockets: HTTP and WebSocket server with built-in TLS
+- OpenSSL: TLS backend used by uWebSockets
+- nlohmann/json: JSON parsing and serialization

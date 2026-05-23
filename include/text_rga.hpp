@@ -61,12 +61,12 @@ public:
     explicit text_RGA(std::string client_id);
 
     // Inserts a character at the beginning of the text.
-    text_change insert_at_beginning(char value);
+    text_change insert_at_beginning(std::string value);
 
     // Inserts a character after an existing character ID.
     text_change insert_after(
         const std::string& previous_id,
-        char value
+        std::string value
     );
 
     // Marks a character as deleted without physically removing it.

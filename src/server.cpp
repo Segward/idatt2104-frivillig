@@ -3,15 +3,11 @@
 
 #include <fstream>
 #include <set>
-#include <sstream>
 #include <uwebsockets/App.h>
 
 namespace {
-  constexpr const char* kBroadcastTopic = "broadcast";
-
   struct PerSocketData {
     std::string id;
-    std::uint64_t id_number{0};
   };
 
   // WEBSITE_INDEX is baked in by CMake and points to the copy of website/
@@ -32,13 +28,18 @@ namespace {
     return index.substr(0, slash + 1) + filename;
   }
 
-  std::uint64_t lowest_unused(const std::set<std::uint64_t>& used) {
-    std::uint64_t candidate = 1;
-    for (std::uint64_t id : used) {
-      if (id != candidate) break;
-      ++candidate;
-    }
-    return candidate;
+  // 128-bit random hex id. Collision-resistant across server restarts so a
+  // recycled "client-N" cannot OR a stale tombstone over a fresh local node.
+  std::string make_client_id() {
+    static thread_local std::mt19937_64 rng{std::random_device{}()};
+    std::uniform_int_distribution<std::uint64_t> dist;
+    std::uint64_t hi = dist(rng);
+    std::uint64_t lo = dist(rng);
+    std::ostringstream stream;
+    stream << "client-" << std::hex << std::setfill('0')
+           << std::setw(16) << hi
+           << std::setw(16) << lo;
+    return stream.str();
   }
 }
 
@@ -74,15 +75,17 @@ void Server::join() {
 
 void Server::run_loop() {
   // All loop-thread-only state lives here.
-  using WS = uWS::WebSocket<false, true, PerSocketData>;
+  using WS = uWS::WebSocket<true, true, PerSocketData>;
   std::set<WS*> conns;
-  std::set<std::uint64_t> used_ids;
 
   const std::string index_html = load_text_file(WEBSITE_INDEX);
   const std::string style_css = load_text_file(website_sibling("style.css"));
   const std::string app_js = load_text_file(website_sibling("app.js"));
 
-  auto app = uWS::App();
+  auto app = uWS::SSLApp({
+    .key_file_name = KEY_PATH,
+    .cert_file_name = CERT_PATH,
+  });
 
   app.get("/", [&](auto* res, auto* /*req*/) {
     if (index_html.empty()) {
@@ -104,13 +107,14 @@ void Server::run_loop() {
 
   app.ws<PerSocketData>("/*", {
     .compression = uWS::DISABLED,
+    // Default uWS limits (16 KB inbound, 64 KB outbound backpressure) trip a
+    // 1009 close as soon as a full text_state crosses the wire. Raise both.
+    .maxPayloadLength = 16 * 1024 * 1024,
+    .maxBackpressure = 16 * 1024 * 1024,
     .open = [&](auto* ws) {
       auto* data = ws->getUserData();
-      data->id_number = lowest_unused(used_ids);
-      used_ids.insert(data->id_number);
-      data->id = "client-" + std::to_string(data->id_number);
+      data->id = make_client_id();
       conns.insert(ws);
-      ws->subscribe(kBroadcastTopic);
       ws->send(Handler::encode_auth(data->id), uWS::OpCode::TEXT);
       ws->send(Handler::encode_counter(_master_counter.state()), uWS::OpCode::TEXT);
       ws->send(Handler::encode_list_state(_master_list.state()), uWS::OpCode::TEXT);
@@ -121,40 +125,38 @@ void Server::run_loop() {
       auto* data = ws->getUserData();
       const std::string payload(msg);
 
-      if (auto incoming = Handler::decode_counter(payload)) {
-        _master_counter.merge(*incoming);
-        const auto state_msg = Handler::encode_counter(_master_counter.state());
-        ws->publish(kBroadcastTopic, state_msg, uWS::OpCode::TEXT);
-        ws->send(state_msg, uWS::OpCode::TEXT);
-        printf("[server] counter merged from %s; value=%lld\n",
-               data->id.c_str(), static_cast<long long>(_master_counter.value()));
-        return;
-      }
+      try {
+        if (auto incoming = Handler::decode_counter(payload)) {
+          _master_counter.merge(*incoming);
+          ws->send(Handler::encode_counter(_master_counter.state()), uWS::OpCode::TEXT);
+          printf("[server] counter merged from %s; value=%lld\n",
+                 data->id.c_str(), static_cast<long long>(_master_counter.value()));
+          return;
+        }
 
-      if (auto incoming = Handler::decode_list_state(payload)) {
-        _master_list.merge(*incoming);
-        const auto state_msg = Handler::encode_list_state(_master_list.state());
-        ws->publish(kBroadcastTopic, state_msg, uWS::OpCode::TEXT);
-        ws->send(state_msg, uWS::OpCode::TEXT);
-        printf("[server] list merged from %s; size=%zu\n",
-               data->id.c_str(), _master_list.value().size());
-        return;
-      }
+        if (auto incoming = Handler::decode_list_state(payload)) {
+          _master_list.merge(*incoming);
+          ws->send(Handler::encode_list_state(_master_list.state()), uWS::OpCode::TEXT);
+          printf("[server] list merged from %s; size=%zu\n",
+                 data->id.c_str(), _master_list.value().size());
+          return;
+        }
 
-      if (auto incoming = Handler::decode_text_state(payload)) {
-        _master_text.merge(*incoming);
-        const auto state_msg = Handler::encode_text_state(_master_text.state());
-        ws->publish(kBroadcastTopic, state_msg, uWS::OpCode::TEXT);
-        ws->send(state_msg, uWS::OpCode::TEXT);
-        printf("[server] text merged from %s; len=%zu\n",
-               data->id.c_str(), _master_text.value().size());
-        return;
+        if (auto incoming = Handler::decode_text_state(payload)) {
+          _master_text.merge(*incoming);
+          ws->send(Handler::encode_text_state(_master_text.state()), uWS::OpCode::TEXT);
+          printf("[server] text merged from %s; len=%zu\n",
+                 data->id.c_str(), _master_text.value().size());
+          return;
+        }
+      } catch (const std::exception& e) {
+        fprintf(stderr, "[server] message handler error from %s: %s\n",
+                data->id.c_str(), e.what());
       }
     },
     .close = [&](auto* ws, int /*code*/, std::string_view /*msg*/) {
       auto* data = ws->getUserData();
       conns.erase(ws);
-      used_ids.erase(data->id_number);
       printf("[server] %s disconnected (total=%zu)\n", data->id.c_str(), conns.size());
     },
   });
@@ -167,7 +169,7 @@ void Server::run_loop() {
     }
     _listen_socket.store(listen_socket);
     _loop.store(uWS::Loop::get());
-    printf("[server] listening on %s:%u\n", _host.c_str(), _port);
+    printf("[server] open https://localhost:%u (Ctrl-C to quit)\n", _port);
   });
 
   app.run();
