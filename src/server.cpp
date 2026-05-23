@@ -1,8 +1,21 @@
+// Server implementation: WebSocket endpoint, static asset serving, and CRDT
+// merge fan-out. See include/server.hpp for the public API.
+//
+// Notes:
+//  - All uWS state (loop, routes, connection set, master CRDTs) lives on a
+//    single IO thread; no mutexes needed inside run_loop's lambdas.
+//  - stop() may be called from any thread (notably ~Server on main). It
+//    trampolines the listen-socket close back onto the IO thread via
+//    loop->defer(), because uWS sockets aren't safe to close from outside
+//    their event loop.
+//  - Messages dispatch try-each-envelope: feed the payload to each
+//    Handler::decode_* until one accepts (the others return nullopt).
+//  - Connection IDs are 128 random bits, not a counter, so a recycled
+//    "client-N" can't OR a stale tombstone over a fresh node after restart.
+
 #include <server.hpp>
 #include <handler.hpp>
 
-#include <fstream>
-#include <set>
 #include <uwebsockets/App.h>
 
 namespace {
@@ -45,6 +58,9 @@ namespace {
 
 Server::Server(const std::string& host, unsigned port)
   : _host(host), _port(port),
+    // The master CRDTs share a fixed replica id "server" — there's only ever
+    // one of them per process, so collision with a real client_id is avoided
+    // by the make_client_id() prefix scheme.
     _master_counter("server"),
     _master_list("server"),
     _master_text("server") {}
@@ -63,6 +79,9 @@ void Server::stop() {
   if (!_running.exchange(false)) return;
   uWS::Loop* loop = _loop.load();
   if (!loop) return;
+  // Defer the close onto the IO thread: uWS internals are not safe to touch
+  // from outside the loop. Also swap the listen socket out atomically so a
+  // racing stop() never closes it twice.
   loop->defer([this] {
     us_listen_socket_t* sock = _listen_socket.exchange(nullptr);
     if (sock) us_listen_socket_close(0, sock);
@@ -74,7 +93,8 @@ void Server::join() {
 }
 
 void Server::run_loop() {
-  // All loop-thread-only state lives here.
+  // All loop-thread-only state lives here. Captured by [&] in every lambda
+  // below, which is safe because every lambda runs on this same thread.
   using WS = uWS::WebSocket<true, true, PerSocketData>;
   std::set<WS*> conns;
 
@@ -112,6 +132,9 @@ void Server::run_loop() {
     .maxPayloadLength = 16 * 1024 * 1024,
     .maxBackpressure = 16 * 1024 * 1024,
     .open = [&](auto* ws) {
+      // On connect: mint an id, register the connection, then push the
+      // assigned id + a full snapshot of all three masters so the client can
+      // bootstrap without waiting for a peer change.
       auto* data = ws->getUserData();
       data->id = make_client_id();
       conns.insert(ws);
@@ -125,6 +148,11 @@ void Server::run_loop() {
       auto* data = ws->getUserData();
       const std::string payload(msg);
 
+      // Try each envelope in turn. Whichever decoder accepts the payload
+      // owns the dispatch; the others return nullopt and we fall through.
+      // The whole block is try/catch'd because any unexpected exception
+      // from the CRDT merges or uWS sends should kill the message, not the
+      // server.
       try {
         if (auto incoming = Handler::decode_counter(payload)) {
           _master_counter.merge(*incoming);

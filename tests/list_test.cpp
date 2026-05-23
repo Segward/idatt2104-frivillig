@@ -1,8 +1,6 @@
-#include <list_rga.hpp>
+#include <crdt/list_rga.hpp>
 
 #include <gtest/gtest.h>
-#include <string>
-#include <vector>
 
 TEST(list_test, starts_empty) {
     ListRGA list("A");

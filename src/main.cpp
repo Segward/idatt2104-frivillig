@@ -1,3 +1,7 @@
+// Entry point: boots the CRDT-backed collaborative editing server. The
+// Server (see include/server.hpp) spawns its own IO thread; join() blocks
+// main until the loop exits.
+
 #include <server.hpp>
 #include <messages.hpp>
 

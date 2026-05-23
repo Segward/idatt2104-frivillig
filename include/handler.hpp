@@ -1,10 +1,15 @@
 #ifndef HANDLER_HPP
 #define HANDLER_HPP
 
-#include <counter_pn.hpp>
-#include <list.hpp>
-#include <text.hpp>
+#include <crdt/counter_pn.hpp>
+#include <crdt/list.hpp>
+#include <crdt/text.hpp>
 
+// Translates between in-memory CRDT state and the JSON envelopes exchanged
+// with browser clients. Centralising the wire format here keeps the server,
+// the tests, and the JS client agreeing on a single schema; decoders return
+// std::nullopt rather than throwing so callers can try each envelope in
+// turn without exception-driven control flow.
 class Handler {
   public:
     static std::string encode_auth(const std::string& id);

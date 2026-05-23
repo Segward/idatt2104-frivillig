@@ -1,4 +1,4 @@
-#include <counter_pn.hpp>
+#include <crdt/counter_pn.hpp>
 
 #include <gtest/gtest.h>
 

@@ -1,3 +1,17 @@
+// Handler implementation: JSON encode/decode for the WebSocket wire protocol.
+// See include/handler.hpp for the public API.
+//
+// Notes:
+//  - The wire uses "element_id" rather than "id" because the auth envelope
+//    already owns "id" (the assigned replica ID).
+//  - Each message has a "type" discriminator; decoders return nullopt on
+//    mismatch, which is what makes the server's try-each-envelope dispatch
+//    work without exception-driven control flow.
+//  - encode_counter omits per-client zero entries — a freshly seeded
+//    replica then ships an empty state that peers accept as a no-op merge.
+//  - Decoders validate every field before constructing output, so a
+//    malformed payload yields a clean nullopt rather than partial state.
+
 #include <handler.hpp>
 
 #include <nlohmann/json.hpp>
@@ -81,6 +95,7 @@ namespace {
     out.previous_id = pid_it->get<std::string>();
     out.value = val_it->get<std::string>();
     out.deleted = del_it->get<bool>();
+    // Empty string is reserved for the list head sentinel.
     if (out.id.empty()) return std::nullopt;
     return out;
   }

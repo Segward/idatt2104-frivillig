@@ -1,22 +1,34 @@
-#include <list_rga.hpp>
+// ListRGA implementation. See include/crdt/list_rga.hpp for the API.
+//
+// Notes:
+//  - Operation IDs are "<client_id>:<20-digit zero-padded seq>". The padding
+//    makes lex comparison agree with numeric ordering; the client prefix
+//    gives global uniqueness without coordination and a deterministic
+//    sibling tiebreaker for concurrent inserts under the same parent.
+//  - apply() has three paths: already-applied -> no-op; applicable now ->
+//    apply and drain pending; predecessor missing -> buffer for retry.
+//  - merge() is a fixed-point loop that copies in any incoming node whose
+//    predecessor is already present and OR-merges tombstones.
 
-// Initializes a list CRDT for this client
+#include <crdt/list_rga.hpp>
+
 ListRGA::ListRGA(std::string client_id)
     : _client_id(std::move(client_id)) {
     if (_client_id.empty()) {
         throw std::invalid_argument("Client ID cannot be empty");
     }
 
-    // Empty string represents beginning of the list.
+    // Empty string represents the list head.
     _children[""] = {};
 }
 
-// Generates a unique ID for local operations and elements
 std::string ListRGA::next_id() {
     _local_sequence++;
 
     std::ostringstream stream;
 
+    // Width-20 zero pad so a lexicographic comparison on the id matches a
+    // numeric comparison on the sequence number.
     stream << _client_id
            << ":"
            << std::setw(20)
@@ -26,12 +38,10 @@ std::string ListRGA::next_id() {
     return stream.str();
 }
 
-// Inserts an item at the beginning of the list
 ListChange ListRGA::insert_at_beginning(const std::string& value) {
     return insert_after("", value);
 }
 
-// Inserts an item after a given list item ID
 ListChange ListRGA::insert_after(
     const std::string& previous_id,
     const std::string& value
@@ -58,7 +68,6 @@ ListChange ListRGA::insert_after(
     return change;
 }
 
-// Creates and applies a delete operation for a list item
 ListChange ListRGA::erase(const std::string& element_id) {
     if (_nodes.find(element_id) == _nodes.end()) {
         throw std::invalid_argument("Cannot erase unknown element");
@@ -78,7 +87,6 @@ ListChange ListRGA::erase(const std::string& element_id) {
     return change;
 }
 
-// Checks whether a change is already queued in the pending buffer
 bool ListRGA::pending_contains(const std::string& operation_id) const {
     return std::any_of(
         _pending_changes.begin(),
@@ -89,7 +97,6 @@ bool ListRGA::pending_contains(const std::string& operation_id) const {
     );
 }
 
-// Attempts to apply a single change; returns false if dependencies are missing
 bool ListRGA::try_apply_change(const ListChange& change) {
     if (change.type == ListOperationType::insert_op) {
         if (change.element_id.empty()) {
@@ -105,6 +112,8 @@ bool ListRGA::try_apply_change(const ListChange& change) {
             return false;
         }
 
+        // Idempotent: if the node is already present, treat the replayed
+        // change as successfully applied without touching state.
         if (_nodes.find(change.element_id) != _nodes.end()) {
             return true;
         }
@@ -126,7 +135,6 @@ bool ListRGA::try_apply_change(const ListChange& change) {
             ) == sibling_list.end()) {
             sibling_list.push_back(change.element_id);
         }
-
         std::sort(sibling_list.begin(), sibling_list.end());
 
         _children.try_emplace(change.element_id, std::vector<std::string>{});
@@ -139,6 +147,8 @@ bool ListRGA::try_apply_change(const ListChange& change) {
             throw std::invalid_argument("Delete operation requires an element ID");
         }
 
+        // Delete arrived before the target insert; defer and let the caller
+        // buffer the op until the insert lands.
         if (_nodes.find(change.element_id) == _nodes.end()) {
             return false;
         }
@@ -150,8 +160,10 @@ bool ListRGA::try_apply_change(const ListChange& change) {
     throw std::invalid_argument("Unknown list operation type");
 }
 
-// Re-attempts buffered pending changes until no further progress is possible
 void ListRGA::retry_pending_changes() {
+    // Outer loop: each successful apply may unblock another pending op
+    // (e.g. an insert that depended on this one). Keep sweeping until no
+    // pass makes progress.
     bool made_progress = true;
 
     while (made_progress) {
@@ -180,28 +192,32 @@ void ListRGA::retry_pending_changes() {
     }
 }
 
-// Applies a local or remote list operation, buffering it if dependencies are missing
 void ListRGA::apply(const ListChange& change) {
     if (change.operation_id.empty()) {
         throw std::invalid_argument("Operation ID cannot be empty");
     }
 
+    // Path 1: already applied — treat as a no-op so redelivery is harmless.
     if (_applied_operations.find(change.operation_id) != _applied_operations.end()) {
         return;
     }
 
+    // Path 2: dependencies present — apply, mark, and drain anything in the
+    // buffer that this op may have unblocked.
     if (try_apply_change(change)) {
         _applied_operations.insert(change.operation_id);
         retry_pending_changes();
         return;
     }
 
+    // Path 3: predecessor not yet seen — buffer for later retry. Dedupe so
+    // the same op doesn't get queued twice if it arrives multiple times
+    // before its predecessor.
     if (!pending_contains(change.operation_id)) {
         _pending_changes.push_back(change);
     }
 }
 
-// Creates a serializable snapshot of the list state
 ListRGAState ListRGA::state() const {
     ListRGAState snapshot;
     snapshot.nodes.reserve(_nodes.size());
@@ -211,7 +227,6 @@ ListRGAState ListRGA::state() const {
     return snapshot;
 }
 
-// Merges incoming list state into this replica
 void ListRGA::merge(const ListRGAState& other) {
     // Multi-pass: a node can only be inserted once its previous_id is present.
     std::vector<ListItem> pending(other.nodes.begin(), other.nodes.end());
@@ -226,7 +241,8 @@ void ListRGA::merge(const ListRGAState& other) {
 
             auto existing = _nodes.find(incoming.id);
             if (existing != _nodes.end()) {
-                // Tombstone join: deleted is a monotonic OR.
+                // Tombstone join: deleted is a monotonic OR, so a delete on
+                // either side always sticks.
                 existing->second.deleted = existing->second.deleted || incoming.deleted;
                 iterator = pending.erase(iterator);
                 made_progress = true;
@@ -251,6 +267,8 @@ void ListRGA::merge(const ListRGAState& other) {
 
             _children.try_emplace(item.id, std::vector<std::string>{});
 
+            // Mark the merged-in node's id as applied. Future deliveries of
+            // the same op (via apply()) will short-circuit as already-seen.
             _applied_operations.insert(item.id);
 
             iterator = pending.erase(iterator);
@@ -259,12 +277,11 @@ void ListRGA::merge(const ListRGAState& other) {
     }
 }
 
-// Builds the visible list recursively from a given item
 void ListRGA::render_from(
     const std::string& previous_id,
     std::vector<std::string>& output
 ) const {
-    // Iterative pre-order walk; see TextRGA::render_from.
+    // Iterative pre-order walk; see TextRGA::render_from for the rationale.
     auto root = _children.find(previous_id);
     if (root == _children.end()) return;
 
@@ -293,7 +310,6 @@ void ListRGA::render_from(
     }
 }
 
-// Returns the visible list items
 std::vector<std::string> ListRGA::value() const {
     std::vector<std::string> output;
 
@@ -302,7 +318,6 @@ std::vector<std::string> ListRGA::value() const {
     return output;
 }
 
-// Formats the visible list as a printable string
 std::string ListRGA::to_string() const {
     std::vector<std::string> items = value();
 
@@ -315,7 +330,6 @@ std::string ListRGA::to_string() const {
     return stream.str();
 }
 
-// Checks whether an operation has already been applied
 bool ListRGA::has_applied(const std::string& operation_id) const {
     return _applied_operations.find(operation_id) != _applied_operations.end();
 }
