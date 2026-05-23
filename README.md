@@ -9,6 +9,17 @@ converge once you reconnect.
 > On Windows, use the `.ps1` equivalents of the scripts below in PowerShell
 > (e.g. `./scripts/cert.ps1`, `./scripts/build.ps1`).
 
+## Implemented functionality
+- PN counter, per-client increment and decrement maps merged by max-per-id.
+- RGA list of strings with tombstoned deletes.
+- RGA text for character-level editing in a textarea, with a diff against
+  the rendered view so local typing turns into RGA inserts and deletes.
+- TLS WebSocket server on uWebSockets that also serves the static client.
+- Server-issued client ids, baked into element ids; auto-reconnect with
+  exponential backoff on the client.
+- Manual sync button that ships the full local state for merge and
+  rebroadcast.
+
 ## Requirements
 - CMake 3.25+
 - A C++23 compiler
@@ -68,17 +79,6 @@ Or run the binary directly to filter by name:
 ```sh
 ./build/tests/tests --gtest_filter='TextRGA*'
 ```
-
-## Implemented functionality
-- PN counter, per-client increment and decrement maps merged by max-per-id.
-- RGA list of strings with tombstoned deletes.
-- RGA text for character-level editing in a textarea, with a diff against
-  the rendered view so local typing turns into RGA inserts and deletes.
-- TLS WebSocket server on uWebSockets that also serves the static client.
-- Server-issued client ids, baked into element ids; auto-reconnect with
-  exponential backoff on the client.
-- Manual sync button that ships the full local state for merge and
-  rebroadcast.
 
 ## Future improvements
 - State lives in memory. A server restart drops everything. Snapshotting
