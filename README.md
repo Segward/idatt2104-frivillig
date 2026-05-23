@@ -1,15 +1,32 @@
-# idatt2104-frivillig
+# CRDT Proof Of Concept Application
+
+A small demo for poking at state-based CRDTs across browser tabs over a
+TLS WebSocket. The server holds the master state in memory; each client
+keeps a local copy and merges on sync, so edits made while offline still
+converge once you reconnect.
 
 > [!NOTE]
 > On Windows, use the `.ps1` equivalents of the scripts below in PowerShell
 > (e.g. `./scripts/cert.ps1`, `./scripts/build.ps1`).
 
+## Implemented functionality
+- PN counter, per-client increment and decrement maps merged by max-per-id.
+- RGA list of strings with tombstoned deletes.
+- RGA text for character-level editing in a textarea, with a diff against
+  the rendered view so local typing turns into RGA inserts and deletes.
+- TLS WebSocket server on uWebSockets that also serves the static client.
+- Server-issued client ids, baked into element ids; auto-reconnect with
+  exponential backoff on the client.
+- Manual sync button that ships the full local state for merge and
+  rebroadcast.
+
 ## Requirements
 - CMake 3.25+
 - A C++23 compiler
-- OpenSSL
 - Git
-- vcpkg build tools: `make`, `pkg-config`, `curl`, `zip`, `unzip`, `tar`
+- OpenSSL
+- make, pkg-config, curl, zip, unzip, tar
+- certbot (optional, for a real domain cert)
 
 ## Install
 > [!IMPORTANT]
@@ -49,8 +66,37 @@ sudo ./scripts/cert.sh [your domain]
 Then open `https://localhost:12345` in your browser. 
 With a deployment open `https://[your domain]` instead.
 
+## Run the tests
+The build also compiles the GoogleTest suite. After building:
+
+```sh
+./scripts/build.sh
+cd build && ctest --output-on-failure
+```
+
+Or run the binary directly to filter by name:
+
+```sh
+./build/tests/tests --gtest_filter='TextRGA*'
+```
+
+## Future improvements
+- State lives in memory. A server restart drops everything. Snapshotting
+  or an external store would fix that.
+- One shared document. Adding rooms would allow independent sessions on
+  the same server.
+- Sync is button-driven. Periodic or change-triggered sync, or op-based
+  deltas, would remove the button and trim bandwidth.
+- RGA tombstones are never garbage collected, so the document grows
+  unboundedly with deletions. A causal-stability GC pass would bound it.
+- The only auth is the server-issued id. Real auth is needed before this
+  is exposed anywhere public.
+- Tests cover the CRDT cores and the wire handler. The WebSocket layer
+  is untested.
+
 ## Third party
-- GoogleTest: C++ unit testing framework
-- uWebSockets: HTTP and WebSocket server with built-in TLS
-- OpenSSL: TLS backend used by uWebSockets
-- nlohmann/json: JSON parsing and serialization
+- GoogleTest: tests under `tests/`.
+- uWebSockets: HTTP + WebSocket server with built-in TLS.
+- OpenSSL: TLS backend for uWebSockets, and the CLI used by the cert
+  scripts.
+- nlohmann/json: wire format between server and client.

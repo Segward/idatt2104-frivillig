@@ -3,7 +3,7 @@
 #include <gtest/gtest.h>
 
 TEST(handler_counter_test, round_trip_empty_state) {
-  counter_pn_state state;
+  CounterPNState state;
 
   auto text = Handler::encode_counter(state);
   auto out = Handler::decode_counter(text);
@@ -14,7 +14,7 @@ TEST(handler_counter_test, round_trip_empty_state) {
 }
 
 TEST(handler_counter_test, round_trip_single_entry) {
-  counter_pn_state state;
+  CounterPNState state;
   state.increments["A"] = 7;
   state.decrements["A"] = 3;
 
@@ -27,7 +27,7 @@ TEST(handler_counter_test, round_trip_single_entry) {
 }
 
 TEST(handler_counter_test, round_trip_multiple_entries) {
-  counter_pn_state state;
+  CounterPNState state;
   state.increments["x"] = 1;
   state.increments["client-123"] = 42;
   state.decrements["client-123"] = 5;
@@ -47,7 +47,7 @@ TEST(handler_counter_test, round_trip_multiple_entries) {
 }
 
 TEST(handler_counter_test, encode_omits_zero_entries) {
-  counter_pn_state state;
+  CounterPNState state;
   state.increments["only-inc"] = 9;
   state.decrements["only-inc"] = 0;
   state.decrements["only-dec"] = 4;
@@ -94,6 +94,16 @@ TEST(handler_counter_test, decode_rejects_negative_values) {
     R"({"type":"counter_state","increments":{"a":-1},"decrements":{}})").has_value());
 }
 
+TEST(handler_counter_test, decode_rejects_float_value) {
+  EXPECT_FALSE(Handler::decode_counter(
+    R"({"type":"counter_state","increments":{"a":1.5},"decrements":{}})").has_value());
+}
+
+TEST(handler_counter_test, decode_rejects_non_object_increments) {
+  EXPECT_FALSE(Handler::decode_counter(
+    R"({"type":"counter_state","increments":[],"decrements":{}})").has_value());
+}
+
 TEST(handler_counter_test, encode_auth_shape) {
   auto text = Handler::encode_auth("client-7");
   EXPECT_NE(text.find(R"("type":"auth")"), std::string::npos);
@@ -101,7 +111,7 @@ TEST(handler_counter_test, encode_auth_shape) {
 }
 
 TEST(handler_list_state_test, round_trip_empty) {
-  list_RGA_state state;
+  ListRGAState state;
   auto text = Handler::encode_list_state(state);
   auto out = Handler::decode_list_state(text);
   ASSERT_TRUE(out.has_value());
@@ -109,7 +119,7 @@ TEST(handler_list_state_test, round_trip_empty) {
 }
 
 TEST(handler_list_state_test, round_trip_nodes) {
-  list_RGA_state state;
+  ListRGAState state;
   state.nodes.push_back({"A:1", "", "Milk", false});
   state.nodes.push_back({"A:2", "A:1", "Bread", true});
 
@@ -129,8 +139,32 @@ TEST(handler_list_state_test, decode_rejects_wrong_type) {
   EXPECT_FALSE(Handler::decode_list_state(R"({"type":"text_state","nodes":[]})").has_value());
 }
 
+TEST(handler_list_state_test, decode_rejects_missing_nodes) {
+  EXPECT_FALSE(Handler::decode_list_state(R"({"type":"list_state"})").has_value());
+}
+
+TEST(handler_list_state_test, decode_rejects_nodes_not_array) {
+  EXPECT_FALSE(Handler::decode_list_state(
+    R"({"type":"list_state","nodes":{}})").has_value());
+}
+
+TEST(handler_list_state_test, decode_rejects_entry_missing_element_id) {
+  EXPECT_FALSE(Handler::decode_list_state(
+    R"({"type":"list_state","nodes":[{"previous_id":"","value":"x","deleted":false}]})").has_value());
+}
+
+TEST(handler_list_state_test, decode_rejects_empty_element_id) {
+  EXPECT_FALSE(Handler::decode_list_state(
+    R"({"type":"list_state","nodes":[{"element_id":"","previous_id":"","value":"x","deleted":false}]})").has_value());
+}
+
+TEST(handler_list_state_test, decode_rejects_wrong_field_type) {
+  EXPECT_FALSE(Handler::decode_list_state(
+    R"({"type":"list_state","nodes":[{"element_id":"A:1","previous_id":"","value":"x","deleted":"no"}]})").has_value());
+}
+
 TEST(handler_text_state_test, round_trip_empty) {
-  text_RGA_state state;
+  TextRGAState state;
   auto text = Handler::encode_text_state(state);
   auto out = Handler::decode_text_state(text);
   ASSERT_TRUE(out.has_value());
@@ -138,7 +172,7 @@ TEST(handler_text_state_test, round_trip_empty) {
 }
 
 TEST(handler_text_state_test, round_trip_nodes) {
-  text_RGA_state state;
+  TextRGAState state;
   state.nodes.push_back({"A:t:1", "", "H", false});
   state.nodes.push_back({"A:t:2", "A:t:1", "i", true});
 
@@ -156,4 +190,28 @@ TEST(handler_text_state_test, round_trip_nodes) {
 
 TEST(handler_text_state_test, decode_rejects_wrong_type) {
   EXPECT_FALSE(Handler::decode_text_state(R"({"type":"list_state","nodes":[]})").has_value());
+}
+
+TEST(handler_text_state_test, decode_rejects_missing_nodes) {
+  EXPECT_FALSE(Handler::decode_text_state(R"({"type":"text_state"})").has_value());
+}
+
+TEST(handler_text_state_test, decode_rejects_nodes_not_array) {
+  EXPECT_FALSE(Handler::decode_text_state(
+    R"({"type":"text_state","nodes":{}})").has_value());
+}
+
+TEST(handler_text_state_test, decode_rejects_entry_missing_element_id) {
+  EXPECT_FALSE(Handler::decode_text_state(
+    R"({"type":"text_state","nodes":[{"previous_id":"","value":"H","deleted":false}]})").has_value());
+}
+
+TEST(handler_text_state_test, decode_rejects_empty_element_id) {
+  EXPECT_FALSE(Handler::decode_text_state(
+    R"({"type":"text_state","nodes":[{"element_id":"","previous_id":"","value":"H","deleted":false}]})").has_value());
+}
+
+TEST(handler_text_state_test, decode_rejects_wrong_field_type) {
+  EXPECT_FALSE(Handler::decode_text_state(
+    R"({"type":"text_state","nodes":[{"element_id":"A:t:1","previous_id":"","value":"H","deleted":"no"}]})").has_value());
 }

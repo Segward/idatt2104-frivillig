@@ -1,29 +1,34 @@
-#include <counter_pn.hpp>
+// CounterPN implementation. See include/crdt/counter_pn.hpp for the API.
+//
+// Notes:
+//  - State is two unordered_maps keyed by client ID; merge takes the
+//    per-client max in each direction (commutative, associative, idempotent).
+//  - value() casts uint64 totals to int64 before subtracting. Lossy near
+//    2^63; expected counter magnitudes are nowhere close, so unguarded.
 
-//Counter with increment/decrement
-counter_pn::counter_pn(std::string client_id)
+#include <crdt/counter_pn.hpp>
+
+CounterPN::CounterPN(std::string client_id)
   : _client_id(std::move(client_id)) {
+  // Prime both maps so this replica always appears in a state() snapshot,
+  // distinguishing "present with zero count" from "absent".
   _state.increments[_client_id] = 0;
   _state.decrements[_client_id] = 0;
 }
 
-//Increments this client's local counter value
-void counter_pn::increment(std::uint64_t amount) {
+void CounterPN::increment(std::uint64_t amount) {
   _state.increments[_client_id] += amount;
 }
 
-//Decrements this client's local counter value
-void counter_pn::decrement(std::uint64_t amount) {
+void CounterPN::decrement(std::uint64_t amount) {
   _state.decrements[_client_id] += amount;
 }
 
-//Merges this counter with another counter
-void counter_pn::merge(const counter_pn& other) {
+void CounterPN::merge(const CounterPN& other) {
   merge(other._state);
 }
 
-//Merges incoming counter state using max per client
-void counter_pn::merge(const counter_pn_state& other) {
+void CounterPN::merge(const CounterPNState& other) {
   for (const auto& [id, incoming] : other.increments) {
     auto& current = _state.increments[id];
     current = std::max(current, incoming);
@@ -34,8 +39,7 @@ void counter_pn::merge(const counter_pn_state& other) {
   }
 }
 
-//Calculates the visible counter value
-std::int64_t counter_pn::value() const {
+std::int64_t CounterPN::value() const {
   std::int64_t total_increments = 0;
   std::int64_t total_decrements = 0;
 
