@@ -2,8 +2,8 @@
 // Server (see include/server.hpp) spawns its own IO thread; join() blocks
 // main until the loop exits.
 
-#include <server.hpp>
-#include <messages.hpp>
+#include <server/server.hpp>
+#include <server/messages.hpp>
 
 int main() {
   try {
@@ -14,6 +14,5 @@ int main() {
     std::cerr << error.what() << '\n';
     return EXIT_FAILURE;
   }
-
   return EXIT_SUCCESS;
 }

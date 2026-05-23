@@ -27,13 +27,11 @@ class CounterPN {
 
     void increment(std::uint64_t amount = 1);
     void decrement(std::uint64_t amount = 1);
-
     void merge(const CounterPN& other);
 
     // Per-client max is monotonic, so repeated or out-of-order merges all
     // reach the same value.
     void merge(const CounterPNState& other);
-
     std::int64_t value() const;
     const CounterPNState& state() const { return _state; }
 

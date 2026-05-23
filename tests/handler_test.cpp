@@ -1,13 +1,11 @@
-#include <handler.hpp>
+#include <server/handler.hpp>
 
 #include <gtest/gtest.h>
 
 TEST(handler_counter_test, round_trip_empty_state) {
   CounterPNState state;
-
   auto text = Handler::encode_counter(state);
   auto out = Handler::decode_counter(text);
-
   ASSERT_TRUE(out.has_value());
   EXPECT_TRUE(out->increments.empty());
   EXPECT_TRUE(out->decrements.empty());
@@ -17,10 +15,8 @@ TEST(handler_counter_test, round_trip_single_entry) {
   CounterPNState state;
   state.increments["A"] = 7;
   state.decrements["A"] = 3;
-
   auto text = Handler::encode_counter(state);
   auto out = Handler::decode_counter(text);
-
   ASSERT_TRUE(out.has_value());
   EXPECT_EQ(out->increments["A"], 7u);
   EXPECT_EQ(out->decrements["A"], 3u);
@@ -34,10 +30,8 @@ TEST(handler_counter_test, round_trip_multiple_entries) {
   std::string long_id(64, 'q');
   state.increments[long_id] = 1000;
   state.decrements[long_id] = 999;
-
   auto text = Handler::encode_counter(state);
   auto out = Handler::decode_counter(text);
-
   ASSERT_TRUE(out.has_value());
   EXPECT_EQ(out->increments["x"], 1u);
   EXPECT_EQ(out->increments["client-123"], 42u);
@@ -51,10 +45,8 @@ TEST(handler_counter_test, encode_omits_zero_entries) {
   state.increments["only-inc"] = 9;
   state.decrements["only-inc"] = 0;
   state.decrements["only-dec"] = 4;
-
   auto text = Handler::encode_counter(state);
   auto out = Handler::decode_counter(text);
-
   ASSERT_TRUE(out.has_value());
   EXPECT_EQ(out->increments.size(), 1u);
   EXPECT_EQ(out->increments["only-inc"], 9u);
@@ -122,7 +114,6 @@ TEST(handler_list_state_test, round_trip_nodes) {
   ListRGAState state;
   state.nodes.push_back({"A:1", "", "Milk", false});
   state.nodes.push_back({"A:2", "A:1", "Bread", true});
-
   auto text = Handler::encode_list_state(state);
   auto out = Handler::decode_list_state(text);
   ASSERT_TRUE(out.has_value());
@@ -175,7 +166,6 @@ TEST(handler_text_state_test, round_trip_nodes) {
   TextRGAState state;
   state.nodes.push_back({"A:t:1", "", "H", false});
   state.nodes.push_back({"A:t:2", "A:t:1", "i", true});
-
   auto text = Handler::encode_text_state(state);
   auto out = Handler::decode_text_state(text);
   ASSERT_TRUE(out.has_value());
