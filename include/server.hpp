@@ -35,6 +35,16 @@ class Server {
   private:
     void run_loop();
 
+    // Dispatches an inbound WebSocket payload against the three master CRDTs.
+    // Returns the echo to send back if any envelope decoder accepted; nullopt
+    // means the payload didn't match anything (or threw — logged, swallowed).
+    std::optional<std::string> process_message(const std::string& client_id,
+                                               std::string_view payload);
+
+    // Binds the listen socket and publishes _listen_socket / _loop on success.
+    // Templated on the uWS app type to keep uWS includes out of this header.
+    template<typename App> void start_listening(App& app);
+
     std::string _host;
     unsigned _port;
 

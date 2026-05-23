@@ -54,6 +54,43 @@ namespace {
            << std::setw(16) << lo;
     return stream.str();
   }
+
+  struct Assets {
+    std::string index_html;
+    std::string style_css;
+    std::string app_js;
+  };
+
+  Assets load_assets() {
+    return {
+      load_text_file(WEBSITE_INDEX),
+      load_text_file(website_sibling("style.css")),
+      load_text_file(website_sibling("app.js")),
+    };
+  }
+
+  // Wires the three static-asset routes. `assets` is captured by reference; it
+  // must outlive `app`. run_loop owns both on the IO thread's stack.
+  template<typename App>
+  void wire_http_routes(App& app, const Assets& assets) {
+    app.get("/", [&assets](auto* res, auto* /*req*/) {
+      if (assets.index_html.empty()) {
+        res->writeStatus("500 Internal Server Error")
+           ->writeHeader("Content-Type", "text/plain")
+           ->end("website/index.html missing from build output.");
+        return;
+      }
+      res->writeHeader("Content-Type", "text/html; charset=utf-8")->end(assets.index_html);
+    });
+
+    app.get("/style.css", [&assets](auto* res, auto* /*req*/) {
+      res->writeHeader("Content-Type", "text/css; charset=utf-8")->end(assets.style_css);
+    });
+
+    app.get("/app.js", [&assets](auto* res, auto* /*req*/) {
+      res->writeHeader("Content-Type", "application/javascript; charset=utf-8")->end(assets.app_js);
+    });
+  }
 }
 
 Server::Server(const std::string& host, unsigned port)
@@ -92,38 +129,67 @@ void Server::join() {
   if (_io_thread.joinable()) _io_thread.join();
 }
 
+std::optional<std::string> Server::process_message(const std::string& client_id,
+                                                   std::string_view payload) {
+  // Try each envelope in turn. Whichever decoder accepts the payload owns
+  // the dispatch; the others return nullopt and we fall through. The whole
+  // block is try/catch'd because any unexpected exception from the CRDT
+  // merges should kill the message, not the server.
+  const std::string str(payload);
+  try {
+    if (auto incoming = Handler::decode_counter(str)) {
+      _master_counter.merge(*incoming);
+      printf("[server] counter merged from %s; value=%lld\n",
+             client_id.c_str(), static_cast<long long>(_master_counter.value()));
+      return Handler::encode_counter(_master_counter.state());
+    }
+    if (auto incoming = Handler::decode_list_state(str)) {
+      _master_list.merge(*incoming);
+      printf("[server] list merged from %s; size=%zu\n",
+             client_id.c_str(), _master_list.value().size());
+      return Handler::encode_list_state(_master_list.state());
+    }
+    if (auto incoming = Handler::decode_text_state(str)) {
+      _master_text.merge(*incoming);
+      printf("[server] text merged from %s; len=%zu\n",
+             client_id.c_str(), _master_text.value().size());
+      return Handler::encode_text_state(_master_text.state());
+    }
+  } catch (const std::exception& e) {
+    fprintf(stderr, "[server] message handler error from %s: %s\n",
+            client_id.c_str(), e.what());
+  }
+  return std::nullopt;
+}
+
+template<typename App>
+void Server::start_listening(App& app) {
+  app.listen(_host, static_cast<int>(_port), [this](auto* listen_socket) {
+    if (!listen_socket) {
+      fprintf(stderr, "[server] listen on %s:%u failed\n", _host.c_str(), _port);
+      _running = false;
+      return;
+    }
+    _listen_socket.store(listen_socket);
+    _loop.store(uWS::Loop::get());
+    printf("[server] open https://localhost:%u (Ctrl-C to quit)\n", _port);
+  });
+}
+
 void Server::run_loop() {
-  // All loop-thread-only state lives here. Captured by [&] in every lambda
+  // All loop-thread-only state lives here. Captured by [&] in the lambdas
   // below, which is safe because every lambda runs on this same thread.
   using WS = uWS::WebSocket<true, true, PerSocketData>;
   std::set<WS*> conns;
 
-  const std::string index_html = load_text_file(WEBSITE_INDEX);
-  const std::string style_css = load_text_file(website_sibling("style.css"));
-  const std::string app_js = load_text_file(website_sibling("app.js"));
+  const Assets assets = load_assets();
 
   auto app = uWS::SSLApp({
     .key_file_name = KEY_PATH,
     .cert_file_name = CERT_PATH,
   });
 
-  app.get("/", [&](auto* res, auto* /*req*/) {
-    if (index_html.empty()) {
-      res->writeStatus("500 Internal Server Error")
-         ->writeHeader("Content-Type", "text/plain")
-         ->end("website/index.html missing from build output.");
-      return;
-    }
-    res->writeHeader("Content-Type", "text/html; charset=utf-8")->end(index_html);
-  });
-
-  app.get("/style.css", [&](auto* res, auto* /*req*/) {
-    res->writeHeader("Content-Type", "text/css; charset=utf-8")->end(style_css);
-  });
-
-  app.get("/app.js", [&](auto* res, auto* /*req*/) {
-    res->writeHeader("Content-Type", "application/javascript; charset=utf-8")->end(app_js);
-  });
+  wire_http_routes(app, assets);
 
   app.ws<PerSocketData>("/*", {
     .compression = uWS::DISABLED,
@@ -144,42 +210,10 @@ void Server::run_loop() {
       ws->send(Handler::encode_text_state(_master_text.state()), uWS::OpCode::TEXT);
       printf("[server] %s connected (total=%zu)\n", data->id.c_str(), conns.size());
     },
-    .message = [&](auto* ws, std::string_view msg, uWS::OpCode /*op*/) {
+    .message = [this](auto* ws, std::string_view msg, uWS::OpCode /*op*/) {
       auto* data = ws->getUserData();
-      const std::string payload(msg);
-
-      // Try each envelope in turn. Whichever decoder accepts the payload
-      // owns the dispatch; the others return nullopt and we fall through.
-      // The whole block is try/catch'd because any unexpected exception
-      // from the CRDT merges or uWS sends should kill the message, not the
-      // server.
-      try {
-        if (auto incoming = Handler::decode_counter(payload)) {
-          _master_counter.merge(*incoming);
-          ws->send(Handler::encode_counter(_master_counter.state()), uWS::OpCode::TEXT);
-          printf("[server] counter merged from %s; value=%lld\n",
-                 data->id.c_str(), static_cast<long long>(_master_counter.value()));
-          return;
-        }
-
-        if (auto incoming = Handler::decode_list_state(payload)) {
-          _master_list.merge(*incoming);
-          ws->send(Handler::encode_list_state(_master_list.state()), uWS::OpCode::TEXT);
-          printf("[server] list merged from %s; size=%zu\n",
-                 data->id.c_str(), _master_list.value().size());
-          return;
-        }
-
-        if (auto incoming = Handler::decode_text_state(payload)) {
-          _master_text.merge(*incoming);
-          ws->send(Handler::encode_text_state(_master_text.state()), uWS::OpCode::TEXT);
-          printf("[server] text merged from %s; len=%zu\n",
-                 data->id.c_str(), _master_text.value().size());
-          return;
-        }
-      } catch (const std::exception& e) {
-        fprintf(stderr, "[server] message handler error from %s: %s\n",
-                data->id.c_str(), e.what());
+      if (auto reply = process_message(data->id, msg)) {
+        ws->send(*reply, uWS::OpCode::TEXT);
       }
     },
     .close = [&](auto* ws, int /*code*/, std::string_view /*msg*/) {
@@ -189,17 +223,7 @@ void Server::run_loop() {
     },
   });
 
-  app.listen(_host, static_cast<int>(_port), [this](auto* listen_socket) {
-    if (!listen_socket) {
-      fprintf(stderr, "[server] listen on %s:%u failed\n", _host.c_str(), _port);
-      _running = false;
-      return;
-    }
-    _listen_socket.store(listen_socket);
-    _loop.store(uWS::Loop::get());
-    printf("[server] open https://localhost:%u (Ctrl-C to quit)\n", _port);
-  });
-
+  start_listening(app);
   app.run();
   _running = false;
 }
