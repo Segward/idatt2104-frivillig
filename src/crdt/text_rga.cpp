@@ -1,11 +1,6 @@
 #include <text_rga.hpp>
 
-#include <algorithm>
-#include <iomanip>
-#include <sstream>
-#include <stdexcept>
-#include <utility>
-
+// Initializes a text CRDT for this client
 text_RGA::text_RGA(std::string client_id)
     : client_id(std::move(client_id)) {
     if (this->client_id.empty()) {
@@ -16,7 +11,7 @@ text_RGA::text_RGA(std::string client_id)
     children[""] = {};
 }
 
-//Generate new ID, unique identifier
+// Generates a unique ID for local operations and elements
 std::string text_RGA::next_id() {
     local_sequence++;
 
@@ -31,12 +26,12 @@ std::string text_RGA::next_id() {
     return stream.str();
 }
 
-//Checks if node exists
+// Checks whether a character node exists
 bool text_RGA::node_exists(const std::string& node_id) const {
     return nodes.find(node_id) != nodes.end();
 }
 
-//Checks if pending changes have a given operation
+// Checks whether an operation is already waiting in pending changes
 bool text_RGA::pending_contains(const std::string& operation_id) const {
     return std::any_of(
         pending_changes.begin(),
@@ -47,12 +42,12 @@ bool text_RGA::pending_contains(const std::string& operation_id) const {
     );
 }
 
-//Insert text at beginning if string; empty string
+// Inserts text at the beginning of the document
 text_change text_RGA::insert_at_beginning(std::string value) {
     return insert_after("", std::move(value));
 }
 
-//Insert text after a given character ID
+// Inserts a character after a given character ID
 text_change text_RGA::insert_after(
     const std::string& previous_id,
     std::string value
@@ -75,7 +70,7 @@ text_change text_RGA::insert_after(
     return change;
 }
 
-//Erase element
+// Creates and applies a delete operation for a character
 text_change text_RGA::erase(const std::string& element_id) {
     if (!node_exists(element_id)) {
         throw std::invalid_argument("Cannot erase unknown element");
@@ -95,7 +90,7 @@ text_change text_RGA::erase(const std::string& element_id) {
     return change;
 }
 
-//Apply a given text change
+// Applies a local or remote text operation
 void text_RGA::apply(const text_change& change) {
     if (change.operation_id.empty()) {
         throw std::invalid_argument("Operation ID cannot be empty");
@@ -116,7 +111,7 @@ void text_RGA::apply(const text_change& change) {
     }
 }
 
-//Apply change if state allows it
+// Attempts to apply a text operation if its dependencies exist
 bool text_RGA::try_apply_change(const text_change& change) {
     if (change.type == text_operation_type::Insert) {
         if (change.element_id.empty()) {
@@ -136,7 +131,6 @@ bool text_RGA::try_apply_change(const text_change& change) {
         character.previous_id = change.previous_id;
         character.value = change.value;
         character.deleted = false;
-
 
         nodes.emplace(change.element_id, character);
 
@@ -174,7 +168,7 @@ bool text_RGA::try_apply_change(const text_change& change) {
     throw std::invalid_argument("Unknown text operation type");
 }
 
-//Retry applying pending changes
+// Retries operations that previously arrived before their dependencies
 void text_RGA::retry_pending_changes() {
     bool made_progress = true;
 
@@ -204,6 +198,7 @@ void text_RGA::retry_pending_changes() {
     }
 }
 
+// Creates a serializable snapshot of the text state
 text_RGA_state text_RGA::state() const {
     text_RGA_state snapshot;
     snapshot.nodes.reserve(nodes.size());
@@ -213,6 +208,7 @@ text_RGA_state text_RGA::state() const {
     return snapshot;
 }
 
+// Merges incoming text state into this replica
 void text_RGA::merge(const text_RGA_state& other) {
     std::vector<text_character> pending(other.nodes.begin(), other.nodes.end());
 
@@ -258,7 +254,7 @@ void text_RGA::merge(const text_RGA_state& other) {
     }
 }
 
-//Create text from given element
+// Builds the visible text recursively from a given character
 void text_RGA::render_from(
     const std::string& previous_id,
     std::string& output
@@ -293,7 +289,7 @@ void text_RGA::render_from(
     }
 }
 
-//Return text
+// Returns the visible text value
 std::string text_RGA::value() const {
     std::string output;
 
@@ -302,7 +298,7 @@ std::string text_RGA::value() const {
     return output;
 }
 
-//Check if operation applied, to avoid repetition
+// Checks whether an operation has already been applied
 bool text_RGA::has_applied(const std::string& operation_id) const {
     return (applied_operations.find(operation_id) != applied_operations.end());
 }
