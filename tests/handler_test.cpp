@@ -94,6 +94,16 @@ TEST(handler_counter_test, decode_rejects_negative_values) {
     R"({"type":"counter_state","increments":{"a":-1},"decrements":{}})").has_value());
 }
 
+TEST(handler_counter_test, decode_rejects_float_value) {
+  EXPECT_FALSE(Handler::decode_counter(
+    R"({"type":"counter_state","increments":{"a":1.5},"decrements":{}})").has_value());
+}
+
+TEST(handler_counter_test, decode_rejects_non_object_increments) {
+  EXPECT_FALSE(Handler::decode_counter(
+    R"({"type":"counter_state","increments":[],"decrements":{}})").has_value());
+}
+
 TEST(handler_counter_test, encode_auth_shape) {
   auto text = Handler::encode_auth("client-7");
   EXPECT_NE(text.find(R"("type":"auth")"), std::string::npos);
@@ -129,6 +139,30 @@ TEST(handler_list_state_test, decode_rejects_wrong_type) {
   EXPECT_FALSE(Handler::decode_list_state(R"({"type":"text_state","nodes":[]})").has_value());
 }
 
+TEST(handler_list_state_test, decode_rejects_missing_nodes) {
+  EXPECT_FALSE(Handler::decode_list_state(R"({"type":"list_state"})").has_value());
+}
+
+TEST(handler_list_state_test, decode_rejects_nodes_not_array) {
+  EXPECT_FALSE(Handler::decode_list_state(
+    R"({"type":"list_state","nodes":{}})").has_value());
+}
+
+TEST(handler_list_state_test, decode_rejects_entry_missing_element_id) {
+  EXPECT_FALSE(Handler::decode_list_state(
+    R"({"type":"list_state","nodes":[{"previous_id":"","value":"x","deleted":false}]})").has_value());
+}
+
+TEST(handler_list_state_test, decode_rejects_empty_element_id) {
+  EXPECT_FALSE(Handler::decode_list_state(
+    R"({"type":"list_state","nodes":[{"element_id":"","previous_id":"","value":"x","deleted":false}]})").has_value());
+}
+
+TEST(handler_list_state_test, decode_rejects_wrong_field_type) {
+  EXPECT_FALSE(Handler::decode_list_state(
+    R"({"type":"list_state","nodes":[{"element_id":"A:1","previous_id":"","value":"x","deleted":"no"}]})").has_value());
+}
+
 TEST(handler_text_state_test, round_trip_empty) {
   TextRGAState state;
   auto text = Handler::encode_text_state(state);
@@ -156,4 +190,28 @@ TEST(handler_text_state_test, round_trip_nodes) {
 
 TEST(handler_text_state_test, decode_rejects_wrong_type) {
   EXPECT_FALSE(Handler::decode_text_state(R"({"type":"list_state","nodes":[]})").has_value());
+}
+
+TEST(handler_text_state_test, decode_rejects_missing_nodes) {
+  EXPECT_FALSE(Handler::decode_text_state(R"({"type":"text_state"})").has_value());
+}
+
+TEST(handler_text_state_test, decode_rejects_nodes_not_array) {
+  EXPECT_FALSE(Handler::decode_text_state(
+    R"({"type":"text_state","nodes":{}})").has_value());
+}
+
+TEST(handler_text_state_test, decode_rejects_entry_missing_element_id) {
+  EXPECT_FALSE(Handler::decode_text_state(
+    R"({"type":"text_state","nodes":[{"previous_id":"","value":"H","deleted":false}]})").has_value());
+}
+
+TEST(handler_text_state_test, decode_rejects_empty_element_id) {
+  EXPECT_FALSE(Handler::decode_text_state(
+    R"({"type":"text_state","nodes":[{"element_id":"","previous_id":"","value":"H","deleted":false}]})").has_value());
+}
+
+TEST(handler_text_state_test, decode_rejects_wrong_field_type) {
+  EXPECT_FALSE(Handler::decode_text_state(
+    R"({"type":"text_state","nodes":[{"element_id":"A:t:1","previous_id":"","value":"H","deleted":"no"}]})").has_value());
 }

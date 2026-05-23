@@ -2,13 +2,13 @@
 
 #include <gtest/gtest.h>
 
-TEST(list_test, starts_empty) {
+TEST(list_rga_test, starts_empty) {
     ListRGA list("A");
 
     EXPECT_TRUE(list.value().empty());
 }
 
-TEST(list_test, insert_at_beginning_adds_item) {
+TEST(list_rga_test, insert_at_beginning_adds_item) {
     ListRGA list("A");
 
     list.insert_at_beginning("Milk");
@@ -18,7 +18,7 @@ TEST(list_test, insert_at_beginning_adds_item) {
     EXPECT_EQ(list.value(), expected);
 }
 
-TEST(list_test, insert_after_adds_item_after_existing_item) {
+TEST(list_rga_test, insert_after_adds_item_after_existing_item) {
     ListRGA list("A");
 
     ListChange milk = list.insert_at_beginning("Milk");
@@ -29,7 +29,7 @@ TEST(list_test, insert_after_adds_item_after_existing_item) {
     EXPECT_EQ(list.value(), expected);
 }
 
-TEST(list_test, multiple_sequential_inserts_build_list) {
+TEST(list_rga_test, multiple_sequential_inserts_build_list) {
     ListRGA list("A");
 
     ListChange milk = list.insert_at_beginning("Milk");
@@ -47,7 +47,7 @@ TEST(list_test, multiple_sequential_inserts_build_list) {
     EXPECT_EQ(list.value(), expected);
 }
 
-TEST(list_test, erase_removes_item_from_visible_list) {
+TEST(list_rga_test, erase_removes_item_from_visible_list) {
     ListRGA list("A");
 
     ListChange milk = list.insert_at_beginning("Milk");
@@ -60,7 +60,7 @@ TEST(list_test, erase_removes_item_from_visible_list) {
     EXPECT_EQ(list.value(), expected);
 }
 
-TEST(list_test, replicates_insert_operations) {
+TEST(list_rga_test, replicates_insert_operations) {
     ListRGA list_a("A");
     ListRGA list_b("B");
 
@@ -76,7 +76,7 @@ TEST(list_test, replicates_insert_operations) {
     EXPECT_EQ(list_b.value(), expected);
 }
 
-TEST(list_test, replicates_delete_operations) {
+TEST(list_rga_test, replicates_delete_operations) {
     ListRGA list_a("A");
     ListRGA list_b("B");
 
@@ -94,7 +94,7 @@ TEST(list_test, replicates_delete_operations) {
     EXPECT_EQ(list_b.value(), expected);
 }
 
-TEST(list_test, duplicate_insert_operation_does_not_duplicate_item) {
+TEST(list_rga_test, duplicate_insert_operation_does_not_duplicate_item) {
     ListRGA list_a("A");
     ListRGA list_b("B");
 
@@ -109,7 +109,7 @@ TEST(list_test, duplicate_insert_operation_does_not_duplicate_item) {
     EXPECT_EQ(list_b.value(), expected);
 }
 
-TEST(list_test, duplicate_delete_operation_does_not_break_state) {
+TEST(list_rga_test, duplicate_delete_operation_does_not_break_state) {
     ListRGA list_a("A");
     ListRGA list_b("B");
 
@@ -124,7 +124,7 @@ TEST(list_test, duplicate_delete_operation_does_not_break_state) {
     EXPECT_TRUE(list_b.value().empty());
 }
 
-TEST(list_test, concurrent_inserts_after_same_parent_converge) {
+TEST(list_rga_test, concurrent_inserts_after_same_parent_converge) {
     ListRGA list_a("A");
     ListRGA list_b("B");
 
@@ -137,7 +137,7 @@ TEST(list_test, concurrent_inserts_after_same_parent_converge) {
     EXPECT_EQ(list_a.value(), list_b.value());
 }
 
-TEST(list_test, applying_independent_operations_in_different_orders_converges) {
+TEST(list_rga_test, applying_independent_operations_in_different_orders_converges) {
     ListRGA list_a("A");
     ListRGA list_b("B");
 
@@ -155,7 +155,7 @@ TEST(list_test, applying_independent_operations_in_different_orders_converges) {
     EXPECT_EQ(result_1.value(), result_2.value());
 }
 
-TEST(list_test, to_string_formats_list_items) {
+TEST(list_rga_test, to_string_formats_list_items) {
     ListRGA list("A");
 
     ListChange milk = list.insert_at_beginning("Milk");
@@ -168,13 +168,13 @@ TEST(list_test, to_string_formats_list_items) {
     EXPECT_EQ(list.to_string(), expected);
 }
 
-TEST(list_test, empty_item_throws_invalid_argument) {
+TEST(list_rga_test, empty_item_throws_invalid_argument) {
     ListRGA list("A");
 
     EXPECT_THROW(list.insert_at_beginning(""), std::invalid_argument);
 }
 
-TEST(list_test, insert_after_unknown_element_throws_invalid_argument) {
+TEST(list_rga_test, insert_after_unknown_element_throws_invalid_argument) {
     ListRGA list("A");
 
     EXPECT_THROW(
@@ -183,7 +183,7 @@ TEST(list_test, insert_after_unknown_element_throws_invalid_argument) {
     );
 }
 
-TEST(list_test, erase_unknown_element_throws_invalid_argument) {
+TEST(list_rga_test, erase_unknown_element_throws_invalid_argument) {
     ListRGA list("A");
 
     EXPECT_THROW(
@@ -192,7 +192,7 @@ TEST(list_test, erase_unknown_element_throws_invalid_argument) {
     );
 }
 
-TEST(list_test, merge_into_empty_copies_all_nodes) {
+TEST(list_rga_test, merge_into_empty_copies_all_nodes) {
     ListRGA source("A");
     ListChange milk = source.insert_at_beginning("Milk");
     source.insert_after(milk.element_id, "Bread");
@@ -203,7 +203,7 @@ TEST(list_test, merge_into_empty_copies_all_nodes) {
     EXPECT_EQ(target.value(), source.value());
 }
 
-TEST(list_test, merge_is_idempotent) {
+TEST(list_rga_test, merge_is_idempotent) {
     ListRGA source("A");
     source.insert_at_beginning("Milk");
 
@@ -215,7 +215,7 @@ TEST(list_test, merge_is_idempotent) {
     EXPECT_EQ(target.value(), source.value());
 }
 
-TEST(list_test, merge_tombstone_wins_when_remote_deleted) {
+TEST(list_rga_test, merge_tombstone_wins_when_remote_deleted) {
     ListRGA source("A");
     ListChange milk = source.insert_at_beginning("Milk");
     source.insert_after(milk.element_id, "Bread");
@@ -231,7 +231,7 @@ TEST(list_test, merge_tombstone_wins_when_remote_deleted) {
     EXPECT_EQ(target.value(), expected);
 }
 
-TEST(list_test, merge_tombstone_wins_when_local_deleted) {
+TEST(list_rga_test, merge_tombstone_wins_when_local_deleted) {
     ListRGA source("A");
     ListChange milk = source.insert_at_beginning("Milk");
     source.insert_after(milk.element_id, "Bread");
@@ -250,7 +250,7 @@ TEST(list_test, merge_tombstone_wins_when_local_deleted) {
     EXPECT_EQ(target.value(), expected);
 }
 
-TEST(list_test, merge_commutative_across_replicas) {
+TEST(list_rga_test, merge_commutative_across_replicas) {
     ListRGA a("A");
     ListRGA b("B");
 
@@ -266,4 +266,53 @@ TEST(list_test, merge_commutative_across_replicas) {
     replica_2.merge(a.state());
 
     EXPECT_EQ(replica_1.value(), replica_2.value());
+}
+
+TEST(list_rga_test, apply_buffers_child_insert_until_parent_arrives) {
+    ListRGA source("A");
+    ListChange milk = source.insert_at_beginning("Milk");
+    ListChange bread = source.insert_after(milk.element_id, "Bread");
+
+    ListRGA target("B");
+
+    target.apply(bread);
+    EXPECT_TRUE(target.value().empty());
+
+    target.apply(milk);
+
+    std::vector<std::string> expected = {"Milk", "Bread"};
+    EXPECT_EQ(target.value(), expected);
+}
+
+TEST(list_rga_test, apply_buffers_delete_until_target_arrives) {
+    ListRGA source("A");
+    ListChange milk = source.insert_at_beginning("Milk");
+    ListChange delete_milk = source.erase(milk.element_id);
+
+    ListRGA target("B");
+
+    target.apply(delete_milk);
+    EXPECT_TRUE(target.value().empty());
+
+    target.apply(milk);
+
+    EXPECT_TRUE(target.value().empty());
+}
+
+TEST(list_rga_test, apply_drains_chain_after_root_arrives) {
+    ListRGA source("A");
+    ListChange one = source.insert_at_beginning("one");
+    ListChange two = source.insert_after(one.element_id, "two");
+    ListChange three = source.insert_after(two.element_id, "three");
+
+    ListRGA target("B");
+
+    target.apply(three);
+    target.apply(two);
+    EXPECT_TRUE(target.value().empty());
+
+    target.apply(one);
+
+    std::vector<std::string> expected = {"one", "two", "three"};
+    EXPECT_EQ(target.value(), expected);
 }
