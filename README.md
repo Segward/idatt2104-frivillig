@@ -12,14 +12,10 @@ converge once you reconnect.
 ## Requirements
 - CMake 3.25+
 - A C++23 compiler
-- Git (vcpkg is vendored as a submodule)
-- `openssl` CLI, used by `scripts/cert.sh` for the self-signed dev cert.
-  The library itself is pulled in through vcpkg with uWebSockets, so no
-  system OpenSSL headers are needed.
-- vcpkg build tools: `make`, `pkg-config`, `curl`, `zip`, `unzip`, `tar`.
-  vcpkg shells out to these while bootstrapping.
-- `certbot`, only if you pass a domain to `scripts/cert.sh` for a real
-  cert. The script installs it via `apt-get`.
+- Git
+- OpenSSL
+- make, pkg-config, curl, zip, unzip, tar
+- certbot (optional, for a real domain cert)
 
 ## Install
 > [!IMPORTANT]
