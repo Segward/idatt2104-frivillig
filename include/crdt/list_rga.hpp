@@ -12,22 +12,19 @@ class ListRGA {
 private:
     std::string _client_id;
     std::uint64_t _local_sequence = 0;
-
     std::unordered_map<std::string, ListItem> _nodes;
     std::unordered_map<std::string, std::vector<std::string>> _children;
     std::unordered_set<std::string> _applied_operations;
 
     // Changes whose previous_id hasn't been seen yet; retried after each
-    // successful apply.
+    // successful apply. The parallel set gives O(1) dedup on rebuffer.
     std::vector<ListChange> _pending_changes;
-
+    std::unordered_set<std::string> _pending_operations;
     std::string next_id();
-    bool pending_contains(const std::string& operation_id) const;
 
     // Returns false (without throwing) if the change's causal predecessor
     // hasn't been seen yet, so the caller can buffer it.
     bool try_apply_change(const ListChange& change);
-
     void retry_pending_changes();
     void render_from(
         const std::string& previous_id,
@@ -36,7 +33,14 @@ private:
 
 public:
     explicit ListRGA(std::string client_id);
+    ~ListRGA() = default;
 
+    // A replica's identity is its client ID; copying or moving the RGA would
+    // silently fork or relocate that identity and break convergence.
+    ListRGA(const ListRGA&) = delete;
+    ListRGA& operator=(const ListRGA&) = delete;
+    ListRGA(ListRGA&&) = delete;
+    ListRGA& operator=(ListRGA&&) = delete;
     ListChange insert_at_beginning(const std::string& value);
     ListChange insert_after(
         const std::string& previous_id,
@@ -50,13 +54,11 @@ public:
     // Applies a local or remote change. Already-seen or unreplayable ops are
     // deduped or buffered; nothing fails noisily.
     void apply(const ListChange& change);
-
     ListRGAState state() const;
 
     // Tombstones win on either side, so deletes are never resurrected by an
     // older incoming state.
     void merge(const ListRGAState& other);
-
     std::vector<std::string> value() const;
     std::string to_string() const;
     bool has_applied(const std::string& operation_id) const;

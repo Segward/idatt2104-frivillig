@@ -102,8 +102,11 @@ Or invoke the binary directly to filter by name:
   deltas, would remove the button and trim bandwidth.
 - RGA tombstones are never garbage collected, so the document grows
   unboundedly with deletions. A causal-stability GC pass would bound it.
-- The only auth is the server-issued id. Real auth is needed before this
-  is exposed anywhere public.
+- Peer state is trusted. The counter saturates instead of overflowing,
+  but a hostile peer can still pin it at `INT64_MAX` (merge is monotonic).
+  Real auth and per-peer validation are needed before public exposure.
+- `merge()` silently drops incoming nodes whose `previous_id` chain never
+  resolves. Safe, but should be logged so malformed state is visible.
 - Tests cover the CRDT cores and the wire handler. The WebSocket layer
   is untested.
 
