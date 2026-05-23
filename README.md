@@ -1,10 +1,9 @@
 # CRDT Proof Of Concept Application
 
-A small client/server demo that explores how state-based CRDTs behave when
-multiple browser tabs edit the same data over a TLS WebSocket connection.
-The server keeps the master state in memory and rebroadcasts merges; each
-client also keeps its own copy and merges incoming state locally, so edits
-made while offline still converge once the client reconnects and syncs.
+A small demo for poking at state-based CRDTs across browser tabs over a
+TLS WebSocket. The server holds the master state in memory; each client
+keeps a local copy and merges on sync, so edits made while offline still
+converge once you reconnect.
 
 > [!NOTE]
 > On Windows, use the `.ps1` equivalents of the scripts below in PowerShell
@@ -13,9 +12,14 @@ made while offline still converge once the client reconnects and syncs.
 ## Requirements
 - CMake 3.25+
 - A C++23 compiler
-- OpenSSL
-- Git
-- vcpkg build tools: `make`, `pkg-config`, `curl`, `zip`, `unzip`, `tar`
+- Git (vcpkg is vendored as a submodule)
+- `openssl` CLI, used by `scripts/cert.sh` for the self-signed dev cert.
+  The library itself is pulled in through vcpkg with uWebSockets, so no
+  system OpenSSL headers are needed.
+- vcpkg build tools: `make`, `pkg-config`, `curl`, `zip`, `unzip`, `tar`.
+  vcpkg shells out to these while bootstrapping.
+- `certbot`, only if you pass a domain to `scripts/cert.sh` for a real
+  cert. The script installs it via `apt-get`.
 
 ## Install
 > [!IMPORTANT]
@@ -56,59 +60,47 @@ Then open `https://localhost:12345` in your browser.
 With a deployment open `https://[your domain]` instead.
 
 ## Run the tests
-The build step also compiles the GoogleTest suite. After building, run it
-from the build directory:
+The build also compiles the GoogleTest suite. After building:
 
 ```sh
 ./scripts/build.sh
 cd build && ctest --output-on-failure
 ```
 
-Or invoke the test binary directly to filter by name:
+Or run the binary directly to filter by name:
 
 ```sh
 ./build/tests/tests --gtest_filter='TextRGA*'
 ```
 
 ## Implemented functionality
-- PN counter CRDT with per-client increment and decrement maps, merged
-  by max-per-id.
-- RGA list CRDT for an ordered, append-and-remove list of strings, with
-  tombstoned deletes.
-- RGA text CRDT for character-level collaborative editing in a textarea,
-  including diff-based local edits against the rendered view.
-- TLS-terminated WebSocket server built on uWebSockets, serving the
-  static client and broadcasting merges to all connected peers.
-- Server-issued client ids used as the site identifier in CRDT element
-  ids, with automatic client reconnect and exponential backoff.
-- Manual sync button that ships the client's full local state to the
-  server, where it is merged into the master and rebroadcast.
+- PN counter, per-client increment and decrement maps merged by max-per-id.
+- RGA list of strings with tombstoned deletes.
+- RGA text for character-level editing in a textarea, with a diff against
+  the rendered view so local typing turns into RGA inserts and deletes.
+- TLS WebSocket server on uWebSockets that also serves the static client.
+- Server-issued client ids, baked into element ids; auto-reconnect with
+  exponential backoff on the client.
+- Manual sync button that ships the full local state for merge and
+  rebroadcast.
 
 ## Future improvements
-- State is in-memory only; restarting the server drops all data. Adding
-  a persistence layer (snapshot on disk, or an external store) would
-  let sessions survive restarts.
-- There is a single shared document. Adding rooms or document ids would
-  allow multiple independent collaborations on the same server.
-- Sync is manual via the button. Periodic or change-triggered sync, or
-  moving to op-based deltas, would remove the need for an explicit
-  action and reduce bandwidth on every merge.
+- State lives in memory. A server restart drops everything. Snapshotting
+  or an external store would fix that.
+- One shared document. Adding rooms would allow independent sessions on
+  the same server.
+- Sync is button-driven. Periodic or change-triggered sync, or op-based
+  deltas, would remove the button and trim bandwidth.
 - RGA tombstones are never garbage collected, so the document grows
-  unboundedly with deletions. A causal-stability based GC pass would
-  bound the state size.
-- The only authentication is the server-issued client id; there is no
-  access control. Adding real auth would be required before exposing
-  the server publicly.
-- Server-side coverage is limited to the CRDT cores and the wire
-  handler. Adding integration tests around the WebSocket layer would
-  catch regressions in connection handling.
+  unboundedly with deletions. A causal-stability GC pass would bound it.
+- The only auth is the server-issued id. Real auth is needed before this
+  is exposed anywhere public.
+- Tests cover the CRDT cores and the wire handler. The WebSocket layer
+  is untested.
 
 ## Third party
-- GoogleTest: C++ unit testing framework, used for the test suite under
-  `tests/`.
-- uWebSockets: HTTP and WebSocket server with built-in TLS, used to
-  serve the static client and run the realtime sync channel.
-- OpenSSL: TLS backend used by uWebSockets, and used by the cert
-  scripts to generate the self-signed development certificate.
-- nlohmann/json: JSON parsing and serialization, used by the handler to
-  encode and decode the messages exchanged between server and clients.
+- GoogleTest: tests under `tests/`.
+- uWebSockets: HTTP + WebSocket server with built-in TLS.
+- OpenSSL: TLS backend for uWebSockets, and the CLI used by the cert
+  scripts.
+- nlohmann/json: wire format between server and client.
