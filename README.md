@@ -116,3 +116,4 @@ Or invoke the binary directly to filter by name:
 - OpenSSL: TLS backend for uWebSockets, and the CLI used by the cert
   scripts.
 - nlohmann/json: wire format between server and client.
+- vcpkg: dependency manager, vendored as a submodule.
