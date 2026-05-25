@@ -29,21 +29,16 @@ converge once you reconnect.
 - certbot (optional, for a real domain cert)
 
 ## Install
-> [!IMPORTANT]
-> Clone with `--recurse-submodules` — vcpkg is vendored as a submodule.
+vcpkg is vendored as a submodule. Easiest path is to clone with
+`--recurse-submodules`:
 
 ```sh
 git clone --recurse-submodules https://github.com/Segward/idatt2104-frivillig.git
 cd idatt2104-frivillig
 ```
 
-If you already cloned without `--recurse-submodules` (or unzipped a hand-in
-archive without the submodule contents), pull vcpkg in afterwards:
-
-```sh
-cd idatt2104-frivillig
-git submodule update --init --recursive
-```
+If you didn't clone with `--recurse-submodules`, `./scripts/build.sh` will
+fetch vcpkg at the pinned commit on first run.
 
 ## Building the application
 Generate a self-signed placeholder cert into `./certs/`:
