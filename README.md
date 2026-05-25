@@ -37,6 +37,14 @@ git clone --recurse-submodules https://github.com/Segward/idatt2104-frivillig.gi
 cd idatt2104-frivillig
 ```
 
+If you already cloned without `--recurse-submodules` (or unzipped a hand-in
+archive without the submodule contents), pull vcpkg in afterwards:
+
+```sh
+cd idatt2104-frivillig
+git submodule update --init --recursive
+```
+
 ## Building the application
 Generate a self-signed placeholder cert into `./certs/`:
 
